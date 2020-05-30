@@ -37,14 +37,16 @@ function readFile(file: File) {
 export function Item(props: {
     item: ItemDef
 }) {
-    const [buffer, setBuffer] = useState<any>();
+    const [buffers, setBuffers] = useState<any>();
     useEffect(() => {
         (async () => {
             if (!props.item.grids.length) { return; }
             //const response = await fetch(props.item.audio);
             //const data = await response.text();
-            const data = await readFile(props.item.grids[0]);
-            setBuffer(data);
+
+            const promises = props.item.grids.map(file => readFile(file))
+            const data = await Promise.all(promises);
+            setBuffers(data);
         })();
     }, [props.item.grids]);
 
@@ -87,7 +89,9 @@ export function Item(props: {
     `}>
         <strong>{props.item.name}</strong>
         <ItemContext.Provider value={{play}}>
-            <TextGrid buffer={buffer} />
+            {buffers ? buffers.map((buffer: any) => {
+                return <TextGrid buffer={buffer} />
+            }) : null}
         </ItemContext.Provider>
     </div>
 }
