@@ -1,7 +1,7 @@
 /** @jsx jsx */
 import useSound from 'use-sound';
 import React, { useEffect, useState } from 'react';
-import { ItemDef } from './App';
+import { ItemDef } from './Items';
 import { TextGrid } from './TextGrid';
 import { css, jsx } from '@emotion/core'
 import 'howler';
@@ -34,6 +34,32 @@ function readFile(file: File) {
     })
 }
 
+
+// For files from the NativeFileSystem API
+async function resolveFileHandle(file: any) {
+    if (file.getFile) {
+        file = await file.getFile();
+    }
+    return file;
+}
+
+async function readFileHighLevel(file: any) {    
+    return await readFile(await resolveFileHandle(file));
+}
+
+
+function useResolveAudio(audio: any) {
+    const [file, setFile] = useState();
+    useEffect(() => {
+        (async () => {
+            setFile(await resolveFileHandle(audio));
+        })();
+    }, [audio]);
+
+    return file;
+}
+
+
 export function Item(props: {
     item: ItemDef
 }) {
@@ -44,19 +70,20 @@ export function Item(props: {
             //const response = await fetch(props.item.audio);
             //const data = await response.text();
 
-            const promises = props.item.grids.map(file => readFile(file))
+            const promises = props.item.grids.map(file => readFileHighLevel(file))
             const data = await Promise.all(promises);
             setBuffers(data);
         })();
     }, [props.item.grids]);
 
     const [audioUrl, setAudioUrl] = useState<string>("");
+    const audioFile = useResolveAudio(props.item.audio);
     React.useEffect(() => {
-        if (!props.item.audio) {
+        if (!audioFile) {
             setAudioUrl("");
             return;
         }        
-        const objectURL = URL.createObjectURL(props.item.audio);
+        const objectURL = URL.createObjectURL(audioFile);
         // https://github.com/joshwcomeau/use-sound/issues/23
         window.setTimeout(() => {
             setAudioUrl(objectURL);
@@ -64,7 +91,7 @@ export function Item(props: {
         return () => {
             URL.revokeObjectURL(objectURL);
         }
-    }, [props.item.audio])
+    }, [audioFile])
 
     const [playInternal, {sound}] = useSound(audioUrl, {
         // @ts-ignore

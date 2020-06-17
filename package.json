@@ -13,6 +13,7 @@
     "react-dom": "^16.13.1",
     "react-dropzone": "^11.0.1",
     "react-scripts": "3.4.1",
+    "react-virtualized": "^9.21.2",
     "typescript": "^3.9.3",
     "use-sound": "^1.0.2"
   },
@@ -36,5 +37,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/eventemitter3": "^2.0.2",
+    "@types/react-virtualized": "^9.21.10"
   }
 }
