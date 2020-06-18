@@ -32,6 +32,8 @@ function App() {
     setItems(items => ([...items, item]));
   }
 
+  const [filter, setFilter] = useState<string>("");
+
   const onDrop = React.useCallback(acceptedFiles => {
     // const nextState = produce(items, draftItems => {
     //   insertNewFiles(draftItems as any, acceptedFiles);
@@ -78,8 +80,15 @@ function App() {
       <div style={{width: '400px', borderLeft: '1px solid black', padding: 10}}>
         <div>
           <button onClick={handleOpen}>open</button>
+          <input value={filter ?? ""} onChange={e => {
+            setFilter(e.currentTarget.value);
+          }} />
         </div>
-        <FileList dirIndex={dirIndex} onSelect={handleSelect} />
+        <FileList 
+          dirIndex={dirIndex} 
+          onSelect={handleSelect}
+          filter={filter}
+        />
       </div>      
     </div>
   );

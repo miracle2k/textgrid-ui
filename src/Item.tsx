@@ -36,23 +36,25 @@ function readFile(file: File) {
 
 
 // For files from the NativeFileSystem API
-async function resolveFileHandle(file: any) {
-    if (file.getFile) {
+async function resolveFileHandle(file: FileHandle|File): Promise<File> {
+    if (file && 'getFile' in file) {
         file = await file.getFile();
     }
     return file;
 }
 
-async function readFileHighLevel(file: any) {    
+async function readFileHighLevel(file: FileHandle|File) {    
     return await readFile(await resolveFileHandle(file));
 }
 
 
 function useResolveAudio(audio: any) {
-    const [file, setFile] = useState();
+    const [file, setFile] = useState<File>();
     useEffect(() => {
         (async () => {
-            setFile(await resolveFileHandle(audio));
+            if (audio) {
+                setFile(await resolveFileHandle(audio));
+            }
         })();
     }, [audio]);
 

@@ -64,6 +64,7 @@ export function Tier(props: {
                     font-size: 16px;
 
                     display: flex;
+                    flex-direction: column;
                     align-items: center;
                     justify-content: center;
 
@@ -71,11 +72,17 @@ export function Tier(props: {
                     bottom: 0;
                     left: ${left}px;
                     width: ${width}px;
+
+                    .times {
+                        font-size: 8px;
+                    }
                 `}
                 onClick={() => {
                     item!.play(from, to);
                 }}>
                     {label}
+
+                    <div className="times">{from} - {to}</div>
                 </div>
             })
         }

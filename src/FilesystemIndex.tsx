@@ -56,6 +56,10 @@ export class DirIndex extends EventEmitter {
 
         this.emit('update')
     }
+
+    getItems(): ItemDef[] {
+        return Object.values(this.map);
+    }
 }
 
 async function* iterateDirectory(dirHandle: any): any {

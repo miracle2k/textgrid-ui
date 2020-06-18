@@ -1,27 +1,37 @@
 import { AutoSizer, List } from "react-virtualized";
 import React, { useEffect, useState, useReducer } from "react";
 import { DirIndex } from "./FilesystemIndex";
+import { ItemDef } from "./Items";
 
 
 export function FileList(props: {
     dirIndex: DirIndex|null,
-    onSelect: any
+    onSelect: any,
+    filter?: string
 }) {
-    const [ignored, forceUpdate] = useReducer(x => x + 1, 0);
-
+    const [unfilteredItems, setUnfilteredItems] = useState<ItemDef[]>([]);
     useEffect(() => {
         const handle = () => {
-            console.log('udpate')
-            forceUpdate();
+            setUnfilteredItems(props.dirIndex?.getItems() ?? []);
         };
         props.dirIndex?.on('update', handle);
         return () => {
             props.dirIndex?.off('update', handle);
         }
-    }, [props.dirIndex, forceUpdate]);
+    }, [props.dirIndex, setUnfilteredItems]);
+    
 
-    console.log('count is', props.dirIndex?.count ?? 0)
+    const [filteredView, setFilteredView] = useState<ItemDef[]>([]);
+    useEffect(() => {
+        let items = unfilteredItems;
+        if (props.filter) {
+            items = items.filter(item => item.name.indexOf(props.filter!) > -1)
+        }
+        setFilteredView(items);
+    }, [unfilteredItems, props.filter]);
 
+
+    console.log('count is', props.dirIndex?.count ?? 0, filteredView.length)
 
     return <AutoSizer>
         {({ height, width }: any) => (
@@ -29,7 +39,7 @@ export function FileList(props: {
             height={height}
             rowHeight={30}
             rowRenderer={({ index, key, style }: any) => {
-                const item = props.dirIndex?.getIndex(index);
+                const item = filteredView[index];
                 return <div key={key} style={style}>
                     <span onClick={() => props.onSelect(item)}>{item?.name}</span>
                     {item?.hasAudio ? <Mark color="red"> A </Mark> : null}
@@ -37,7 +47,7 @@ export function FileList(props: {
                 </div>
             }}
             width={width}
-            rowCount={props.dirIndex?.count ?? 0}
+            rowCount={filteredView.length}
         />
         )}
     </AutoSizer>
