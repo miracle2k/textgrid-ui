@@ -1,7 +1,7 @@
 import { AutoSizer, List } from "react-virtualized";
 import React, { useEffect, useState, useReducer } from "react";
-import { DirIndex } from "./FilesystemIndex";
-import { ItemDef } from "./Items";
+import { DirIndex } from "../FilesystemIndex";
+import { ItemDef } from "../Items";
 
 
 export function FileList(props: {

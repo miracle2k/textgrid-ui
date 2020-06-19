@@ -2,11 +2,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import './App.css';
 import {useDropzone} from 'react-dropzone'
-import {Item} from './Item';
+import {Item} from './components/Item';
 import { css, jsx } from '@emotion/core'
-import produce from "immer"
 import { DirIndex } from './FilesystemIndex';
-import {FileList} from './FileList';
+import {FileList} from './components/FileList';
 import { ItemDef } from './Items';
 
 
