@@ -5,6 +5,8 @@ import { ItemDef } from './Items';
 import { TextGrid } from './TextGrid';
 import { css, jsx } from '@emotion/core'
 import 'howler';
+import { verifyPermission } from './FilesystemIndex';
+
 
 export type ItemContextType = {
     play: (from: number, to: number) => void
@@ -38,7 +40,8 @@ function readFile(file: File) {
 // For files from the NativeFileSystem API
 async function resolveFileHandle(file: FileHandle|File): Promise<File> {
     if (file && 'getFile' in file) {
-        file = await file.getFile();
+        await verifyPermission(file);
+        file = await file.getFile();        
     }
     return file;
 }

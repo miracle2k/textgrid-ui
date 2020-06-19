@@ -1,8 +1,9 @@
+import { openDB, deleteDB, wrap, unwrap } from 'idb';
 import { ItemMap, ItemDef } from "./Items";
 import {EventEmitter} from 'events';
 
 
-async function verifyPermission(fileHandle: any, withWrite: boolean) {
+export async function verifyPermission(fileHandle: any, withWrite: boolean = false) {
     const opts: any = {};
     if (withWrite) {
       opts.writable = true;
@@ -21,14 +22,36 @@ async function verifyPermission(fileHandle: any, withWrite: boolean) {
 
 
 export class DirIndex extends EventEmitter {
-    private handles: any[];
     private map: ItemMap;
+    private db: any;
 
     constructor() {
-        super();
-        this.handles = [];
+        super();        
         this.map = {};
     }
+
+    async load() {
+        this.db = await openDB('textgrid', 1, {
+            upgrade(db, oldVersion, newVersion, transaction) {
+                if (!db.objectStoreNames.contains('dirs')) {
+                    db.createObjectStore('dirs', {keyPath: 'id', autoIncrement: true});
+                }
+            },
+            blocked() {
+            },
+            blocking() {
+            },
+            terminated() {
+            },
+          });
+
+        let transaction = this.db.transaction("dirs", "readonly");
+        let dirs = await this.db.getAll("dirs");
+        for (const dirRecord of dirs) {            
+            await this.indexHandle(dirRecord.handle);
+        }   
+        this.emit('update')
+    }   
 
     get count() {
         return Object.keys(this.map).length;
@@ -38,8 +61,18 @@ export class DirIndex extends EventEmitter {
         return Object.values(this.map)[idx];
     }
 
-    async addHandle(handle: any) {
-        this.handles.push(handle);
+    async addHandle(handle: DirectoryHandle) {
+        let transaction = this.db.transaction("dirs", "readwrite");
+        let dirs = transaction.objectStore("dirs");
+        await dirs.add({
+            handle: handle
+        });
+
+        await this.indexHandle(handle);
+        this.emit('update')
+    }
+
+    private async indexHandle(handle: DirectoryHandle) {
         const fileMap = this.map;
         for await (const file of iterateDirectory(handle)) {
             const baseName = removeExtension(file.name);
@@ -53,8 +86,6 @@ export class DirIndex extends EventEmitter {
                 fileMap[baseName].grids.push(file);
             }
         }
-
-        this.emit('update')
     }
 
     getItems(): ItemDef[] {
@@ -85,5 +116,5 @@ function removeExtension(name: string) {
       return name;
     }
   
-    return name.replace(/\.(.*?)$/, "");
+    return name.replace(/\.([^.]*?)$/, "");
   }

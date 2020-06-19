@@ -25,6 +25,10 @@ function App() {
   const dirIndex = useMemo(() => {
       return new DirIndex();
   }, []);
+
+  useEffect(() => {
+    dirIndex.load();
+  }, [dirIndex])
   
   const hasItems = !!items.length;
 
