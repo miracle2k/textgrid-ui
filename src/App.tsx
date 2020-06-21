@@ -72,7 +72,7 @@ function App() {
             </div> : null}
 
             {items.map((item, idx) => {
-              return <Item item={item} key={idx} />
+              return <Item item={item} key={idx} dirIndex={dirIndex} />
             })} 
           </div>
         </div>

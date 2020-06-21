@@ -1,11 +1,11 @@
 /** @jsx jsx */
 import useSound from 'use-sound';
 import React, { useEffect, useState } from 'react';
-import { ItemDef } from '../Items';
+import { ItemDef, FolderRecord } from '../Items';
 import { TextGrid } from './TextGrid';
 import { css, jsx } from '@emotion/core'
 import 'howler';
-import { verifyPermission } from '../FilesystemIndex';
+import { verifyPermission, DirIndex } from '../FilesystemIndex';
 
 
 export type ItemContextType = {
@@ -66,18 +66,25 @@ function useResolveAudio(audio: any) {
 
 
 export function Item(props: {
-    item: ItemDef
+    item: ItemDef,
+    dirIndex: DirIndex
 }) {
-    const [buffers, setBuffers] = useState<any>();
+    const [buffers, setBuffers] = useState<(ArrayBuffer|string)[]>();
+    const [folders, setFolders] = useState<FolderRecord[]>();
     useEffect(() => {
         (async () => {
             if (!props.item.grids.length) { return; }
             //const response = await fetch(props.item.audio);
-            //const data = await response.text();
-
-            const promises = props.item.grids.map(file => readFileHighLevel(file.data))
-            const data = await Promise.all(promises);
-            setBuffers(data);
+            //const data = await response.text();            
+            const buffers = await Promise.all(
+                props.item.grids.map(file => readFileHighLevel(file.data))
+            );            
+            
+            const folders = await Promise.all(
+                props.item.grids.map(item =>  props.dirIndex.getFolder(item.folderId))
+            );
+            setBuffers(buffers);
+            setFolders(folders);
         })();
     }, [props.item.grids]);
 
@@ -121,8 +128,8 @@ export function Item(props: {
     `}>
         <strong>{props.item.name}</strong>
         <ItemContext.Provider value={{play}}>
-            {buffers ? buffers.map((buffer: any) => {
-                return <TextGrid buffer={buffer} />
+            {buffers ? buffers.map((buffer: any, idx: number) => {
+                return <TextGrid buffer={buffer} color={folders?.[idx].color} />
             }) : null}
         </ItemContext.Provider>
     </div>

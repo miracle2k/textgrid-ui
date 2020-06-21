@@ -1,7 +1,7 @@
 import {AutoSizer, List} from "react-virtualized";
 import React, { useEffect, useState } from "react";
 import {DirIndex} from "../FilesystemIndex";
-import { Directory } from "../Items";
+import { FolderRecord } from "../Items";
 import { CirclePicker } from 'react-color';
 import { Popover, PopoverTrigger, Input, PopoverContent, PopoverArrow, PopoverCloseButton, PopoverBody, IconButton, Button } from "@chakra-ui/core";
 
@@ -9,7 +9,7 @@ import { Popover, PopoverTrigger, Input, PopoverContent, PopoverArrow, PopoverCl
 export function DirectoryList(props: {
     dirIndex: DirIndex|null
 }) {
-    const [dirs, setDirs] = useState<Directory[]>([]);
+    const [dirs, setDirs] = useState<FolderRecord[]>([]);
     useEffect(() => {
         const handle = async () => {            
             const dirs = await props.dirIndex?.getFolders();
@@ -39,7 +39,7 @@ export function DirectoryList(props: {
 
 
 function DirListItem(props: {
-    dir: Directory,
+    dir: FolderRecord,
     dirIndex: DirIndex
 }) {
     let label = props.dir.name ?? "";
@@ -97,7 +97,7 @@ function DirListItem(props: {
 
 
 export function DirectoryProperties(props: {
-    dir: Directory,
+    dir: FolderRecord,
     dirIndex: DirIndex
 }) {
     const {dir} = props;

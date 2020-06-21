@@ -7,7 +7,6 @@ export interface FolderReference<T> {
 }
 
 
-
 export class ItemDef {
     name: string = "";
     audio?: FolderReference<File|FileHandle>|null = null;
@@ -38,7 +37,7 @@ export class ItemDef {
 export type ItemMap = {[key: string]: ItemDef};
 
 
-export type Directory = {
+export type FolderRecord = {
     id: number;
     name?: string;
     handle: DirectoryHandle;

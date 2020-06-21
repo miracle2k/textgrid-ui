@@ -1,7 +1,7 @@
 import { openDB, deleteDB, wrap, unwrap } from 'idb';
 import { ItemMap, ItemDef } from "./Items";
 import {EventEmitter} from 'events';
-import { Directory } from './Items';
+import { FolderRecord } from './Items';
 
 
 export async function verifyPermission(fileHandle: any, withWrite: boolean = false) {
@@ -104,14 +104,18 @@ export class DirIndex extends EventEmitter {
         this.emit('update');
     }
 
-    async getFolders(): Promise<Directory[]> {
-        let dirs: Directory[] = await this.db?.getAll("dirs");
+    async getFolders(): Promise<FolderRecord[]> {
+        let dirs: FolderRecord[] = await this.db?.getAll("dirs");
         if (!dirs) { return []; }
         return Array.from(dirs);
     }
 
-    async updateFolder(dirId: number, props: Partial<Directory>) {
-        const d = await this.db.get('dirs', dirId);
+    async getFolder(folderId: number): Promise<FolderRecord> {
+        return await this.db.get('dirs', folderId);
+    }
+
+    async updateFolder(folderId: number, props: Partial<FolderRecord>) {
+        const d = await this.db.get('dirs', folderId);
         await this.db.put('dirs', {...d, ...props});
         this.emit('update');
     }

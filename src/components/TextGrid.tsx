@@ -9,8 +9,10 @@ import { useItem } from "./Item";
 import {Buffer} from 'buffer';
 
 
+
 export function TextGrid(props: {
-    buffer: string|Buffer
+    buffer: string|Buffer,
+    color?: string,
 }) {
     const tg = useMemo(() => {
         if (!props.buffer) {
@@ -23,7 +25,9 @@ export function TextGrid(props: {
         return <React.Fragment>(no text grid)</React.Fragment>;
     }
     
-    return <div>
+    return <div css={css`
+    border-left: 8px solid ${[props.color ?? "black"]};
+`}>
        {tg.tierNameList.map((name: string, idx: number) => {
           return <Tier tier={tg.tierDict[name]} key={idx} />
        })}
@@ -32,7 +36,7 @@ export function TextGrid(props: {
 
 
 export function Tier(props: {
-    tier: any
+    tier: any,     
 }) {
     const item = useItem();
     const {tier} = props;
