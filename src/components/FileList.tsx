@@ -31,7 +31,7 @@ export function FileList(props: {
     }, [unfilteredItems, props.filter]);
 
 
-    console.log('count is', props.dirIndex?.count ?? 0, filteredView.length)
+    //console.log('count is', props.dirIndex?.count ?? 0, filteredView.length)
 
     return <AutoSizer>
         {({ height, width }: any) => (

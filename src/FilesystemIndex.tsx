@@ -1,6 +1,7 @@
 import { openDB, deleteDB, wrap, unwrap } from 'idb';
 import { ItemMap, ItemDef } from "./Items";
 import {EventEmitter} from 'events';
+import { Directory } from './Items';
 
 
 export async function verifyPermission(fileHandle: any, withWrite: boolean = false) {
@@ -21,9 +22,11 @@ export async function verifyPermission(fileHandle: any, withWrite: boolean = fal
 }
 
 
-export class DirIndex extends EventEmitter {
-    private map: ItemMap;
+export class DirIndex extends EventEmitter {    
     private db: any;
+
+    // 
+    private map: ItemMap;
 
     constructor() {
         super();        
@@ -47,8 +50,9 @@ export class DirIndex extends EventEmitter {
 
         let transaction = this.db.transaction("dirs", "readonly");
         let dirs = await this.db.getAll("dirs");
-        for (const dirRecord of dirs) {            
-            await this.indexHandle(dirRecord.handle);
+        for (const dirRecord of dirs) {   
+            if (!dirRecord.handle) { continue; }         
+            await this.indexHandle(dirRecord.handle, dirRecord.id);
         }   
         this.emit('update')
     }   
@@ -64,15 +68,15 @@ export class DirIndex extends EventEmitter {
     async addHandle(handle: DirectoryHandle) {
         let transaction = this.db.transaction("dirs", "readwrite");
         let dirs = transaction.objectStore("dirs");
-        await dirs.add({
+        const {result} = await dirs.add({
             handle: handle
         });
 
-        await this.indexHandle(handle);
+        await this.indexHandle(handle, result);
         this.emit('update')
     }
 
-    private async indexHandle(handle: DirectoryHandle) {
+    private async indexHandle(handle: DirectoryHandle, folderId: number) {
         const fileMap = this.map;
         for await (const file of iterateDirectory(handle)) {
             const baseName = removeExtension(file.name);
@@ -80,10 +84,10 @@ export class DirIndex extends EventEmitter {
                 fileMap[baseName] = new ItemDef(baseName);
             }
             if (file.name.endsWith('.mp3') || file.name.endsWith('.wav')) {
-                fileMap[baseName].audio = file;
+                fileMap[baseName].audio = {data: file, folderId};
             }
             else {
-                fileMap[baseName].grids.push(file);
+                fileMap[baseName].grids.push({data: file, folderId});
             }
         }
     }
@@ -91,9 +95,29 @@ export class DirIndex extends EventEmitter {
     getItems(): ItemDef[] {
         return Object.values(this.map);
     }
+
+    async removeFolder(folderId: number) {
+        await this.db?.delete("dirs", folderId);
+        for (const item of Object.values(this.map)) {
+            item.removeAllReferencingFolder(folderId);
+        }
+        this.emit('update');
+    }
+
+    async getFolders(): Promise<Directory[]> {
+        let dirs: Directory[] = await this.db?.getAll("dirs");
+        if (!dirs) { return []; }
+        return Array.from(dirs);
+    }
+
+    async updateFolder(dirId: number, props: Partial<Directory>) {
+        const d = await this.db.get('dirs', dirId);
+        await this.db.put('dirs', {...d, ...props});
+        this.emit('update');
+    }
 }
 
-async function* iterateDirectory(dirHandle: any): any {
+async function* iterateDirectory(dirHandle: any): AsyncIterable<FileHandle> {
     const entries = await dirHandle.getEntries();
     for await (const entry of entries) {
         if (entry.isFile) {

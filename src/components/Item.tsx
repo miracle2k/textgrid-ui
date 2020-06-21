@@ -75,7 +75,7 @@ export function Item(props: {
             //const response = await fetch(props.item.audio);
             //const data = await response.text();
 
-            const promises = props.item.grids.map(file => readFileHighLevel(file))
+            const promises = props.item.grids.map(file => readFileHighLevel(file.data))
             const data = await Promise.all(promises);
             setBuffers(data);
         })();

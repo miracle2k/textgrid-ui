@@ -7,6 +7,9 @@ import { css, jsx } from '@emotion/core'
 import { DirIndex } from './FilesystemIndex';
 import {FileList} from './components/FileList';
 import { ItemDef } from './Items';
+import { DirectoryList } from './components/DirectoryList';
+import { ThemeProvider } from "@chakra-ui/core";
+import { Sidebar } from './components/Sidebar';
 
 
 // function getSaple() {
@@ -33,9 +36,7 @@ function App() {
 
   const handleSelect = (item: ItemDef) => {
     setItems(items => ([...items, item]));
-  }
-
-  const [filter, setFilter] = useState<string>("");
+  }  
 
   const onDrop = React.useCallback(acceptedFiles => {
     // const nextState = produce(items, draftItems => {
@@ -44,56 +45,43 @@ function App() {
     // setItems(nextState);
   }, [setItems, items])
   
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop, noClick: true})
-
-  async function handleOpen() {
-    const opts = {type: 'open-directory'};
-    const handle = await (window as any).chooseFileSystemEntries(opts);
-    dirIndex.addHandle(handle);
-  }
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop, noClick: true})  
   
   return (
-    <div style={{display: 'flex', flexDirection: 'row'}}>      
-      <div {...getRootProps()} style={{position: 'relative', flex: 1}}>
-        <input {...getInputProps()} />
-        <div css={css`
-          height: 100vh;
-        `}>
-          {(!hasItems || isDragActive) ? <div css={css`
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            right: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          `}>{
-              isDragActive ?
-                <p>Drop the files here ...</p> :
-                <p>Drag 'n' drop some files here, or click to select files</p>
-            }
-          </div> : null}
+    <ThemeProvider>
+      <div style={{display: 'flex', flexDirection: 'row'}}>      
+        <div {...getRootProps()} style={{position: 'relative', flex: 1}}>
+          <input {...getInputProps()} />
+          <div css={css`
+            height: 100vh;
+          `}>
+            {(!hasItems || isDragActive) ? <div css={css`
+              position: absolute;
+              left: 0;
+              top: 0;
+              bottom: 0;
+              right: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            `}>{
+                isDragActive ?
+                  <p>Drop the files here ...</p> :
+                  <p>Drag 'n' drop some files here, or click to select files</p>
+              }
+            </div> : null}
 
-          {items.map((item, idx) => {
-            return <Item item={item} key={idx} />
-          })} 
+            {items.map((item, idx) => {
+              return <Item item={item} key={idx} />
+            })} 
+          </div>
         </div>
-      </div>
-      <div style={{width: '400px', borderLeft: '1px solid black', padding: 10}}>
-        <div>
-          <button onClick={handleOpen}>open</button>
-          <input value={filter ?? ""} onChange={e => {
-            setFilter(e.currentTarget.value);
-          }} />
-        </div>
-        <FileList 
-          dirIndex={dirIndex} 
+        <Sidebar 
           onSelect={handleSelect}
-          filter={filter}
+          dirIndex={dirIndex}
         />
-      </div>      
-    </div>
+      </div>
+    </ThemeProvider>
   );
 }
 
