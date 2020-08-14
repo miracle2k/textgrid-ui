@@ -51,7 +51,7 @@ async function readFileHighLevel(file: FileHandle|File) {
 }
 
 
-function useResolveAudio(audio: any) {
+function useResolveAudio(audio: File|FileHandle|undefined) {
     const [file, setFile] = useState<File>();
     useEffect(() => {
         (async () => {
@@ -89,7 +89,7 @@ export function Item(props: {
     }, [props.item.grids]);
 
     const [audioUrl, setAudioUrl] = useState<string>("");
-    const audioFile = useResolveAudio(props.item.audio);
+    const audioFile = useResolveAudio(props.item.audio?.data);
     React.useEffect(() => {
         if (!audioFile) {
             setAudioUrl("");

@@ -26,7 +26,7 @@ export function DirectoryList(props: {
         {({ height, width }: any) => (
         <List
             height={height}
-            rowHeight={30}
+            rowHeight={40}
             rowRenderer={({ index, key, style }: any) => {
                 return <DirListItem dir={dirs[index]} dirIndex={props.dirIndex!} />
             }}
@@ -51,7 +51,7 @@ function DirListItem(props: {
         extra = ` (folder: ${props.dir.handle?.name ?? '(unknown)'})`
     }   
 
-    return <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
+    return <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center',  height: '40px'}}>
         <Popover usePortal={true}>
             <PopoverTrigger>
                 <div style={{
