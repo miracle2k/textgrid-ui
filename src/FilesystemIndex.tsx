@@ -52,7 +52,11 @@ export class DirIndex extends EventEmitter {
         let dirs = await this.db.getAll("dirs");
         for (const dirRecord of dirs) {   
             if (!dirRecord.handle) { continue; }         
-            await this.indexHandle(dirRecord.handle, dirRecord.id);
+            try {
+                await this.indexHandle(dirRecord.handle, dirRecord.id);
+            } catch (e) {
+                console.log(dirRecord, e);
+            }
         }   
         this.emit('update')
     }   
@@ -68,7 +72,7 @@ export class DirIndex extends EventEmitter {
     async addHandle(handle: DirectoryHandle) {
         let transaction = this.db.transaction("dirs", "readwrite");
         let dirs = transaction.objectStore("dirs");
-        const {result} = await dirs.add({
+        const result = await dirs.add({
             handle: handle
         });
 

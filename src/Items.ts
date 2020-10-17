@@ -7,6 +7,7 @@ export interface FolderReference<T> {
 }
 
 
+
 export class ItemDef {
     name: string = "";
     audio?: FolderReference<File|FileHandle>|null = null;
