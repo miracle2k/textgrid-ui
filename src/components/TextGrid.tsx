@@ -5,7 +5,7 @@ import {
     serializeTextgrid, serializeTextgridToCsv
   } from 'praatio';
   import { css, jsx } from '@emotion/core'
-import { useItem } from "./Item";
+import { useItem } from "../browsers/multiple-folders/components/Item";
 import {Buffer} from 'buffer';
 
 

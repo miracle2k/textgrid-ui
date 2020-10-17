@@ -7,11 +7,13 @@ export interface FolderReference<T> {
 }
 
 
-
+/**
+ * Iten which can be added a textgrid file.
+ */
 export class ItemDef {
     name: string = "";
-    audio?: FolderReference<File|FileHandle>|null = null;
-    grids: (FolderReference<File|FileHandle>)[] = [];
+    audio?: FolderReference<File|FileSystemFileHandle>|null = null;
+    grids: (FolderReference<File|FileSystemFileHandle>)[] = [];
 
     constructor(name: string) {
         this.name = name;
@@ -32,7 +34,7 @@ export class ItemDef {
 
         this.grids = this.grids.filter(g => g.folderId != folderId);
     }
-};
+}
 
 
 export type ItemMap = {[key: string]: ItemDef};
@@ -41,6 +43,6 @@ export type ItemMap = {[key: string]: ItemDef};
 export type FolderRecord = {
     id: number;
     name?: string;
-    handle: DirectoryHandle;
+    handle: FileSystemDirectoryHandle;
     color?: string;
 };

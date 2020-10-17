@@ -1,25 +1,7 @@
-import { openDB, deleteDB, wrap, unwrap } from 'idb';
+import { openDB } from 'idb';
 import { ItemMap, ItemDef } from "./Items";
 import {EventEmitter} from 'events';
 import { FolderRecord } from './Items';
-
-
-export async function verifyPermission(fileHandle: any, withWrite: boolean = false) {
-    const opts: any = {};
-    if (withWrite) {
-      opts.writable = true;
-    }
-    // Check if we already have permission, if so, return true.
-    if (await fileHandle.queryPermission(opts) === 'granted') {
-      return true;
-    }
-    // Request permission, if the user grants permission, return true.
-    if (await fileHandle.requestPermission(opts) === 'granted') {
-      return true;
-    }
-    // The user didn't grant permission, return false.
-    return false;
-}
 
 
 export class DirIndex extends EventEmitter {    
@@ -69,7 +51,7 @@ export class DirIndex extends EventEmitter {
         return Object.values(this.map)[idx];
     }
 
-    async addHandle(handle: DirectoryHandle) {
+    async addHandle(handle: FileSystemDirectoryHandle) {
         let transaction = this.db.transaction("dirs", "readwrite");
         let dirs = transaction.objectStore("dirs");
         const result = await dirs.add({
@@ -80,7 +62,7 @@ export class DirIndex extends EventEmitter {
         this.emit('update')
     }
 
-    private async indexHandle(handle: DirectoryHandle, folderId: number) {
+    private async indexHandle(handle: FileSystemDirectoryHandle, folderId: number) {
         const fileMap = this.map;
         for await (const file of iterateDirectory(handle)) {
             const baseName = removeExtension(file.name);
@@ -125,7 +107,7 @@ export class DirIndex extends EventEmitter {
     }
 }
 
-async function* iterateDirectory(dirHandle: any): AsyncIterable<FileHandle> {
+async function* iterateDirectory(dirHandle: any): AsyncIterable<FileSystemFileHandle> {
     const entries = await dirHandle.getEntries();
     for await (const entry of entries) {
         if (entry.isFile) {

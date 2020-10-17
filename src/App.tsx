@@ -1,15 +1,13 @@
-/** @jsx jsx */
 import React, { useEffect, useState, useMemo } from 'react';
 import './App.css';
 import {useDropzone} from 'react-dropzone'
-import {Item} from './components/Item';
+import {Item} from './browsers/multiple-folders/components/Item';
 import { css, jsx } from '@emotion/core'
 import { DirIndex } from './browsers/multiple-folders/FilesystemIndex';
-import {FileList} from './browsers/multiple-folders/components/FileList';
 import { ItemDef } from './browsers/multiple-folders/Items';
-import { DirectoryList } from './browsers/multiple-folders/components/DirectoryList';
 import { ThemeProvider } from "@chakra-ui/core";
 import { Sidebar } from './browsers/multiple-folders/components/Sidebar';
+import { MainRunSubdirs } from './browsers/run-subdirs/Main';
 
 
 // function getSaple() {
@@ -22,21 +20,23 @@ import { Sidebar } from './browsers/multiple-folders/components/Sidebar';
 // }
 
 
-function App() {
+
+function MainMultipleFolders(props: {}) {
   const [items, setItems] = useState<ItemDef[]>([]);
+
   const dirIndex = useMemo(() => {
-      return new DirIndex();
+    return new DirIndex();
   }, []);
 
   useEffect(() => {
     dirIndex.load();
   }, [dirIndex])
-  
+
   const hasItems = !!items.length;
 
   const handleSelect = (item: ItemDef) => {
     setItems(items => ([...items, item]));
-  }  
+  }
 
   const onDrop = React.useCallback(acceptedFiles => {
     // const nextState = produce(items, draftItems => {
@@ -44,18 +44,16 @@ function App() {
     // });
     // setItems(nextState);
   }, [setItems, items])
-  
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop, noClick: true})  
-  
-  return (
-    <ThemeProvider>
-      <div style={{display: 'flex', flexDirection: 'row'}}>      
-        <div {...getRootProps()} style={{position: 'relative', flex: 1}}>
-          <input {...getInputProps()} />
-          <div css={css`
+
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop, noClick: true})
+
+  return <div style={{display: 'flex', flexDirection: 'row'}}>
+    <div {...getRootProps()} style={{position: 'relative', flex: 1}}>
+      <input {...getInputProps()} />
+      <div css={css`
             height: 100vh;
           `}>
-            {(!hasItems || isDragActive) ? <div css={css`
+        {(!hasItems || isDragActive) ? <div css={css`
               position: absolute;
               left: 0;
               top: 0;
@@ -65,22 +63,28 @@ function App() {
               align-items: center;
               justify-content: center;
             `}>{
-                isDragActive ?
-                  <p>Drop the files here ...</p> :
-                  <p>Drag 'n' drop some files here, or click to select files</p>
-              }
-            </div> : null}
+          isDragActive ?
+              <p>Drop the files here ...</p> :
+              <p>Drag 'n' drop some files here, or click to select files</p>
+        }
+        </div> : null}
 
-            {items.map((item, idx) => {
-              return <Item item={item} key={idx} dirIndex={dirIndex} />
-            })} 
-          </div>
-        </div>
-        <Sidebar 
-          onSelect={handleSelect}
-          dirIndex={dirIndex}
-        />
+        {items.map((item, idx) => {
+          return <Item item={item} key={idx} dirIndex={dirIndex} />
+        })}
       </div>
+    </div>
+    <Sidebar
+        onSelect={handleSelect}
+        dirIndex={dirIndex}
+    />
+  </div>
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <MainRunSubdirs />
     </ThemeProvider>
   );
 }

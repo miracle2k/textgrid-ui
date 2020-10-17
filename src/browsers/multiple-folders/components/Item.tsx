@@ -1,9 +1,12 @@
 import useSound from 'use-sound';
 import React, { useEffect, useState } from 'react';
+import { ItemDef, FolderRecord } from '../Items';
+import { TextGrid } from '../../../components/TextGrid';
 import { css } from '@emotion/core'
 import 'howler';
-import {verifyPermission} from "../utils/verifyPermission";
-import { TextGrid } from './TextGrid';
+import {verifyPermission} from "../../../utils/verifyPermission";
+import {DirIndex} from "../FilesystemIndex";
+import {readFileHighLevel, useResolveAudio} from "../../../components/Item";
 
 
 export type ItemContextType = {
@@ -16,90 +19,31 @@ export function useItem() {
 }
 
 
-export class ItemSet {
-    name: string = "";
-    audio?: File|FileSystemFileHandle|null = null;
-    grids: (File|FileSystemFileHandle)[] = [];
-
-    constructor(name: string) {
-        this.name = name;
-    }
-
-    get hasAudio() {
-        return !!this.audio;
-    }
-
-    get hasGrid() {
-        return !!this.grids.length;
-    }
-}
-
-
-// For files from the NativeFileSystem API
-export async function resolveFileHandle(file: FileSystemFileHandle|File): Promise<File> {
-    if (file && 'getFile' in file) {
-        await verifyPermission(file);
-        file = await file.getFile();        
-    }
-    return file;
-}
-
-export function readFile(file: File) {
-    return new Promise<string|ArrayBuffer>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onabort = () => reject('file reading was aborted')
-        reader.onerror = () => reject('file reading has failed')
-        reader.onload = () => {
-            // Do whatever you want with the file contents
-            const binaryStr = reader.result
-            if (binaryStr === null) {
-                reject('null');
-                return;
-            }
-            resolve(binaryStr);
-        }
-        return reader.readAsArrayBuffer(file)
-    })
-}
-
-
-export async function readFileHighLevel(file: FileSystemFileHandle|File) {
-    return await readFile(await resolveFileHandle(file));
-}
-
-
-export function useResolveAudio(audio: File|FileSystemFileHandle|undefined|null) {
-    const [file, setFile] = useState<File>();
-    useEffect(() => {
-        (async () => {
-            if (audio) {
-                setFile(await resolveFileHandle(audio));
-            }
-        })();
-    }, [audio]);
-
-    return file;
-}
-
-
 export function Item(props: {
-    item: ItemSet,
+    item: ItemDef,
+    dirIndex: DirIndex
 }) {
     const [buffers, setBuffers] = useState<(ArrayBuffer|string)[]>();
+    const [folders, setFolders] = useState<FolderRecord[]>();
     useEffect(() => {
         (async () => {
             if (!props.item.grids.length) { return; }
             //const response = await fetch(props.item.audio);
             //const data = await response.text();            
             const buffers = await Promise.all(
-                props.item.grids.map(file => readFileHighLevel(file))
+                props.item.grids.map(file => readFileHighLevel(file.data))
+            );            
+            
+            const folders = await Promise.all(
+                props.item.grids.map(item =>  props.dirIndex.getFolder(item.folderId))
             );
             setBuffers(buffers);
+            setFolders(folders);
         })();
     }, [props.item.grids]);
 
     const [audioUrl, setAudioUrl] = useState<string>("");
-    const audioFile = useResolveAudio(props.item.audio);
+    const audioFile = useResolveAudio(props.item.audio?.data);
     React.useEffect(() => {
         if (!audioFile) {
             setAudioUrl("");
@@ -139,7 +83,7 @@ export function Item(props: {
         <strong>{props.item.name}</strong>
         <ItemContext.Provider value={{play}}>
             {buffers ? buffers.map((buffer: any, idx: number) => {
-                return <TextGrid buffer={buffer}  />
+                return <TextGrid buffer={buffer} color={folders?.[idx].color} />
             }) : null}
         </ItemContext.Provider>
     </div>
