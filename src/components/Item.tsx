@@ -1,11 +1,11 @@
 /** @jsx jsx */
 import useSound from 'use-sound';
 import React, { useEffect, useState } from 'react';
-import { ItemDef, FolderRecord } from '../Items';
+import { ItemDef, FolderRecord } from '../browsers/multiple-folders/Items';
 import { TextGrid } from './TextGrid';
 import { css, jsx } from '@emotion/core'
 import 'howler';
-import { verifyPermission, DirIndex } from '../FilesystemIndex';
+import { verifyPermission, DirIndex } from '../browsers/multiple-folders/FilesystemIndex';
 
 
 export type ItemContextType = {

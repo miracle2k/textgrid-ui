@@ -4,12 +4,12 @@ import './App.css';
 import {useDropzone} from 'react-dropzone'
 import {Item} from './components/Item';
 import { css, jsx } from '@emotion/core'
-import { DirIndex } from './FilesystemIndex';
-import {FileList} from './components/FileList';
-import { ItemDef } from './Items';
-import { DirectoryList } from './components/DirectoryList';
+import { DirIndex } from './browsers/multiple-folders/FilesystemIndex';
+import {FileList} from './browsers/multiple-folders/components/FileList';
+import { ItemDef } from './browsers/multiple-folders/Items';
+import { DirectoryList } from './browsers/multiple-folders/components/DirectoryList';
 import { ThemeProvider } from "@chakra-ui/core";
-import { Sidebar } from './components/Sidebar';
+import { Sidebar } from './browsers/multiple-folders/components/Sidebar';
 
 
 // function getSaple() {
