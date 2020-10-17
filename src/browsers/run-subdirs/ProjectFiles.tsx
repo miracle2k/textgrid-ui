@@ -53,12 +53,12 @@ export function RunComponent(props: {
     return <>Loading...</>
   }
   return <ul>
-    {Object.values(props.run.grids).map(fileGroup => {
-      return Object.values(fileGroup).map(file => {
+    {Object.entries(props.run.grids).map(([groupId, fileGroup]) => {
+      return Object.entries(fileGroup).map(([fileId, file]) => {
         return <li>
           <a href={""} onClick={e => {
             e.preventDefault();
-            props.openTextgridItem(file);
+            props.openTextgridItem(groupId, fileId, file);
           }}>{file.name}</a>
         </li>
       })

@@ -8,7 +8,7 @@ import { ProjectFiles } from "./ProjectFiles";
 import {ItemSet, Item} from "../../components/Item";
 
 
-export type OpenTextGridItem = (item: FileSystemFileHandle) => void;
+export type OpenTextGridItem = (groupId: string, fileId: string, item: FileSystemFileHandle) => void;
 
 export function MainRunSubdirs() {
   const projectIndex = useMemo(() => {
@@ -19,9 +19,11 @@ export function MainRunSubdirs() {
   const [selectedProject, setSelectedProject] = useState<Project|null>(null);
   const [items, setItems] = useState<ItemSet[]>([]);
 
-  const openTextGridItem: OpenTextGridItem = (textgrid) => {
-    const item: ItemSet = new ItemSet(textgrid.name);
+  const openTextGridItem: OpenTextGridItem = (groupId, fileId, textgrid) => {
+    const item: ItemSet = new ItemSet(fileId);
+    const audioFile = selectedProject?.audioFiles[groupId][fileId];
     item.grids = [textgrid];
+    item.audio = audioFile;
     setItems(items => ([...items, item]));
   }
 

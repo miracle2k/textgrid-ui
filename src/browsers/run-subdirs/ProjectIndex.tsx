@@ -1,6 +1,7 @@
 import {EventEmitter} from "events";
 import {openDB} from "idb";
 import {IDBPDatabase} from "idb/build/esm/entry";
+import {verifyPermission} from "../../utils/verifyPermission";
 
 
 type ProjectRecord = {
@@ -13,10 +14,12 @@ export class Project extends EventEmitter {
   private db: IDBPDatabase<any>;
   public record: ProjectRecord;
   private runs: {[key: string]: Run};
+  public audioFiles: {[group: string]: { [name: string]: FileSystemFileHandle }};
 
   constructor(db: IDBPDatabase, record: ProjectRecord) {
     super();
     this.runs = {};
+    this.audioFiles = {};
     this.db = db;
     this.record = record;
   }
@@ -43,17 +46,18 @@ export class Project extends EventEmitter {
       this.runs = await Project.indexRuns(this.record.gridsFolder);
     }
 
-    this.emit("update");
+    if (this.record.audioFolder) {
+      this.audioFiles = await Project.indexGroupOfFiles(this.record.audioFolder, ['wav', 'mp3'])
+      console.log(this.audioFiles)
+    }
 
-    // this.audioFilesByGroup = {
-    // }
+    this.emit("update");
   }
 
   private static async indexRuns(handle: FileSystemDirectoryHandle) {
     const runs: {[key: string]: Run} = {};
 
     for await (const entry of handle.values()) {
-      console.log(entry, entry.isDirectory)
       if (entry.kind !== "directory") {
         continue;
       }
@@ -70,7 +74,7 @@ export class Project extends EventEmitter {
    * One-level deep:
    *   /storybooks/file.wav
    */
-  public static async indexGroupOfFiles(handle: FileSystemDirectoryHandle) {
+  public static async indexGroupOfFiles(handle: FileSystemDirectoryHandle, ext?: string[]) {
     const files: {[group: string]: { [name: string]: FileSystemFileHandle }} = {};
 
     for await (const groupFile of handle.values()) {
@@ -85,7 +89,10 @@ export class Project extends EventEmitter {
 
       for await (const file of groupFile.values()) {
         if (file.kind !== 'file') { continue; }
-        const baseName = removeExtension(groupFile.name);
+        if (ext && ext?.indexOf(getExtension(file.name))  == -1) {
+          continue;
+        }
+        const baseName = removeExtension(file.name);
         fileGroup[baseName] = file;
       }
     }
@@ -96,6 +103,11 @@ export class Project extends EventEmitter {
   getRuns(): Run[] {
     return Object.values(this.runs);
   }
+}
+
+
+function getExtension(filename: string) {
+  return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
 }
 
 export class Run extends EventEmitter {
@@ -110,7 +122,7 @@ export class Run extends EventEmitter {
 
   // Load all grid files in this directory
   async loadGrids() {
-    await this.directory.requestPermission();
+    await verifyPermission(this.directory);
     let gridsDir: any;
     try {
       gridsDir = await this.directory.getDirectoryHandle("grids");
