@@ -44,8 +44,11 @@ export async function resolveFileHandle(file: FileSystemFileHandle|File): Promis
     return file;
 }
 
-export function readFile(file: File) {
-    return new Promise<string|ArrayBuffer>((resolve, reject) => {
+export function readFile(file: File, as: 'string'): Promise<string>;
+export function readFile(file: File, as: 'arraybuffer'): Promise<ArrayBuffer>;
+export function readFile(file: File): Promise<ArrayBuffer>;
+export function readFile(file: File, as?:  'arraybuffer'|'string'): Promise<ArrayBuffer|string> {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onabort = () => reject('file reading was aborted')
         reader.onerror = () => reject('file reading has failed')
@@ -56,9 +59,14 @@ export function readFile(file: File) {
                 reject('null');
                 return;
             }
-            resolve(binaryStr);
+            resolve(binaryStr as ArrayBuffer);
         }
-        return reader.readAsArrayBuffer(file)
+        if (as === 'arraybuffer') {
+            return reader.readAsArrayBuffer(file)
+        }
+        else {
+            return reader.readAsText(file);
+        }
     })
 }
 

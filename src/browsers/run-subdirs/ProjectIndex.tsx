@@ -2,6 +2,7 @@ import {EventEmitter} from "events";
 import {openDB} from "idb";
 import {IDBPDatabase} from "idb/build/esm/entry";
 import {verifyPermission} from "../../utils/verifyPermission";
+import {readFile} from "../../components/Item";
 
 
 type ProjectRecord = {
@@ -56,14 +57,24 @@ export class Project extends EventEmitter {
 
   private static async indexRuns(handle: FileSystemDirectoryHandle) {
     const runs: {[key: string]: Run} = {};
+    await verifyPermission(handle);
 
     for await (const entry of handle.values()) {
       if (entry.kind !== "directory") {
         continue;
       }
+
+      let info: string;
+      try {
+        const infoFile = await entry.getFileHandle("INFO");
+        info = await readFile(await infoFile.getFile(), 'string')
+      } catch (e) {
+        info = "";
+      }
+
       const baseName = removeExtension(entry.name);
       if (!runs[baseName]) {
-        runs[baseName] = new Run(entry);
+        runs[baseName] = new Run(entry, {info});
       }
     }
 
@@ -89,7 +100,7 @@ export class Project extends EventEmitter {
 
       for await (const file of groupFile.values()) {
         if (file.kind !== 'file') { continue; }
-        if (ext && ext?.indexOf(getExtension(file.name))  == -1) {
+        if (ext && ext?.indexOf(getExtension(file.name)) === -1) {
           continue;
         }
         const baseName = removeExtension(file.name);
@@ -114,10 +125,14 @@ export class Run extends EventEmitter {
   directory: FileSystemDirectoryHandle
   stats?: any
   public grids?: {[group: string]: { [name: string]: FileSystemFileHandle }}
+  public info: string;
 
-  constructor(file: FileSystemDirectoryHandle) {
+  constructor(file: FileSystemDirectoryHandle, opts: {
+    info: string
+  }) {
     super();
     this.directory = file;
+    this.info = opts?.info;
   }
 
   // Load all grid files in this directory

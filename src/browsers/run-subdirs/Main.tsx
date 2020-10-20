@@ -1,6 +1,6 @@
 import React, {useMemo, useState, useEffect} from "react";
 import {Tabs, TabList, TabPanels, Tab, TabPanel, Button} from "@chakra-ui/core";
-import {css} from "@emotion/core";
+import {css} from "emotion";
 import {ProjectIndex, Project} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
 import {AlignmentList} from "./AlignmentList";
@@ -27,24 +27,33 @@ export function MainRunSubdirs() {
     setItems(items => ([...items, item]));
   }
 
-  return <div style={{display: 'flex', flexDirection: 'row'}}>
-    <div css={css`
+  return <div style={{display: 'flex', flexDirection: 'column'}}>
+    <div className={css`
       height: 100vh;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
     `}>
-      <Tabs>
+      <Tabs style={{display: 'flex', flexDirection: 'column', flex: 1}}>
         <TabList>
           <Tab>Dashboard</Tab>
           <Tab>Browse Project</Tab>
           <Tab>Loaded Grids</Tab>
         </TabList>
 
-        <TabPanels>
+        <TabPanels style={{display: 'flex', flexDirection: 'column', flex: 1}}>
           <TabPanel>
             <Dashboard index={projectIndex} onProjectSelect={project => {
               setSelectedProject(project)
             }}/>
           </TabPanel>
-          <TabPanel>
+          <TabPanel className={css`
+            :not([hidden]) {
+              display: flex;
+              flex-direction: column;
+              flex: 1;
+            }
+          `}>
             {selectedProject ? <ProjectFiles project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
           </TabPanel>
           <TabPanel>
