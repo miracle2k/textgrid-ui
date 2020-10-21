@@ -83,7 +83,7 @@ export class Project extends EventEmitter {
 
       const baseName = removeExtension(entry.name);
       if (!runs[baseName]) {
-        runs[baseName] = new Run(entry, {info, diff});
+        runs[baseName] = new Run(baseName, entry, {info, diff});
       }
     }
 
@@ -138,15 +138,17 @@ export type Diff = {
 
 export class Run extends EventEmitter {
   directory: FileSystemDirectoryHandle
+  public id: string;
   public grids?: {[group: string]: { [name: string]: FileSystemFileHandle }}
   public readonly info: string;
   public readonly diff: Diff|undefined;
 
-  constructor(file: FileSystemDirectoryHandle, opts: {
+  constructor(id: string, file: FileSystemDirectoryHandle, opts: {
     info: string,
     diff?: Diff
   }) {
     super();
+    this.id = id;
     this.directory = file;
     this.info = opts?.info;
     this.diff = opts?.diff;
@@ -154,6 +156,7 @@ export class Run extends EventEmitter {
 
   // Load all grid files in this directory
   async loadGrids() {
+    if (this.grids) { return; } // already loaded
     await verifyPermission(this.directory);
     let gridsDir: any;
     try {

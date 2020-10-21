@@ -18,12 +18,8 @@ export function MainRunSubdirs() {
   const [selectedProject, setSelectedProject] = useState<Project|null>(null);
   const [items, setItems] = useState<ItemSet[]>([]);
 
-  const openTextGridItem: OpenTextGridItem = (groupId, fileId, textgrid) => {
-    const item: ItemSet = new ItemSet(fileId);
-    const audioFile = selectedProject?.audioFiles[groupId][fileId];
-    item.grids = [textgrid];
-    item.audio = audioFile;
-    setItems(items => ([...items, item]));
+  const openTextGridItem = (itemSet: ItemSet) => {
+    setItems(items => ([...items, itemSet]));
   }
 
   return <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -77,8 +73,9 @@ export function Dashboard(props: {
   }
 
   return <div style={{padding: '20px'}}>
-    <h3>Projects</h3>
-    <Button onClick={handleAdd}>Add</Button>
+    <h3>
+      Projects <Button onClick={handleAdd} size={"sm"}>Add</Button>
+    </h3>
 
     {Array.from(props.index.projects.values()).map(project => {
       return <ProjectRow index={props.index} project={project} onSelect={() => { props.onProjectSelect(project) }} />
@@ -97,19 +94,19 @@ function ProjectRow(props: {
   return  <div style={{border: '1px solid gray', padding: '19px'}}>
     <h4>
       {project.record.id} {" "}
-      <Button onClick={() => props.index.deleteProject(project.record.id)}>Delete</Button>
-      <Button onClick={props.onSelect}>Pick</Button>
+      <Button size="xs" variantColor={"red"} onClick={() => props.index.deleteProject(project.record.id)}>Delete</Button>
+      <Button size="sm" onClick={props.onSelect}>Pick</Button>
 
       <div>
         Audio: {project.record.audioFolder?.name ?? "(none)"} {" "}
-        <Button onClick={async () => {
+        <Button size="xs" onClick={async () => {
           const handle = await window.showDirectoryPicker();
           project.setAudioFolder(handle);
         }}>Change</Button>
       </div>
       <div>
         Grids: {project.record.gridsFolder?.name ?? "(none)"} {" "}
-        <Button onClick={async () => {
+        <Button size="xs" onClick={async () => {
           const handle = await window.showDirectoryPicker();
           project.setGridsFolder(handle);
         }}>Change</Button>

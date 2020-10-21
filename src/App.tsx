@@ -5,7 +5,7 @@ import {Item} from './browsers/multiple-folders/components/Item';
 import { css, jsx } from '@emotion/core'
 import { DirIndex } from './browsers/multiple-folders/FilesystemIndex';
 import { ItemDef } from './browsers/multiple-folders/Items';
-import { ThemeProvider } from "@chakra-ui/core";
+import { ThemeProvider, CSSReset } from "@chakra-ui/core";
 import { Sidebar } from './browsers/multiple-folders/components/Sidebar';
 import { MainRunSubdirs } from './browsers/run-subdirs/Main';
 
@@ -84,6 +84,7 @@ function MainMultipleFolders(props: {}) {
 function App() {
   return (
     <ThemeProvider>
+      <CSSReset />
       <MainRunSubdirs />
     </ThemeProvider>
   );

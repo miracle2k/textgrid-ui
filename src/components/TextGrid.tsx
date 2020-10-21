@@ -1,66 +1,80 @@
-/** @jsx jsx */
 import React, { useMemo } from "react";
 import {
-    Textgrid, IntervalTier, PointTier, parseTextgrid,
-    serializeTextgrid, serializeTextgridToCsv
-  } from 'praatio';
-  import { css, jsx } from '@emotion/core'
+  parseTextgrid,
+} from 'praatio';
+import { css } from 'emotion'
 import {Buffer} from 'buffer';
 import { useItem } from "./Item";
 
 
 
 export function TextGrid(props: {
-    buffer: string|Buffer,
-    color?: string,
+  buffer: string|Buffer,
+  color?: string,
+  handleStyle?: any
 }) {
-    const tg = useMemo(() => {
-        if (!props.buffer) {
-            return null;
-        }
-        return parseTextgrid(Buffer.from(props.buffer));
-    }, [props.buffer]);
-
-    if (!tg) {
-        return <React.Fragment>(no text grid)</React.Fragment>;
+  const tg = useMemo(() => {
+    if (!props.buffer) {
+      return null;
     }
-    
-    return <div css={css`
-    border-left: 8px solid ${[props.color ?? "black"]};
-`}>
-       {tg.tierNameList.map((name: string, idx: number) => {
-          return <Tier tier={tg.tierDict[name]} key={idx} />
-       })}
+    return parseTextgrid(Buffer.from(props.buffer));
+  }, [props.buffer]);
+
+  if (!tg) {
+    return <React.Fragment>(no text grid)</React.Fragment>;
+  }
+
+  return <div style={{
+    display: 'flex',
+    flexDirection: 'row'
+  }}>
+    <div style={{
+      width: '20px',
+      ...props.handleStyle
+    }} />
+
+    <div>
+      {tg.tierNameList.map((name: string, idx: number) => {
+        return <Tier tier={tg.tierDict[name]} key={idx} />
+      })}
     </div>
+  </div>
 }
 
+/**
+ * work on better/cleaner exports*
+ *   add speaker support
+ *
+ * first test case:
+ *    speaker specific vs not
+ */
 
 export function Tier(props: {
-    tier: any,     
+  tier: any,
 }) {
-    const item = useItem();
-    const {tier} = props;
-    const maxValue = tier.maxTimestamp;
-    const pixelsPerSecond = 500;
+  const item = useItem();
+  const {tier} = props;
+  const maxValue = tier.maxTimestamp;
+  const pixelsPerSecond = 500;
 
 
-    return <div css={css`
+  return <div className={css`
         padding: 10px;
         font-size: 24px;
         border-radius: 4px;
         position: relative;
         height: 30px;
   `}>
-        {
-            tier.entryList.map((entry: any, idx: number) => {
-                const from = entry[0];
-                const to = entry[1];
-                const label = entry[2];
+    {
+      tier.entryList.map((entry: any, idx: number) => {
+        const from = entry[0];
+        const to = entry[1];
+        const label = entry[2];
 
-                const left = from * pixelsPerSecond;
-                const width = (to - from) * pixelsPerSecond;
+        const left = from * pixelsPerSecond;
+        const width = (to - from) * pixelsPerSecond;
 
-                return <div key={idx} css={css`
+        return <div key={idx} className={css`
                     position: absolute;
                     border: 1px solid silver;
                     margin: 1px;
@@ -81,14 +95,14 @@ export function Tier(props: {
                         font-size: 8px;
                     }
                 `}
-                onClick={() => {
-                    item!.play(from, to);
-                }}>
-                    {label}
+                    onClick={() => {
+                      item!.play(from, to);
+                    }}>
+          {label}
 
-                    <div className="times">{from} - {to}</div>
-                </div>
-            })
-        }
-    </div>;
+          <div className="times">{from} - {to}</div>
+        </div>
+      })
+    }
+  </div>;
 }
