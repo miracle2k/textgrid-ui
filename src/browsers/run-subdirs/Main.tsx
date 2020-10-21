@@ -3,7 +3,6 @@ import {Tabs, TabList, TabPanels, Tab, TabPanel, Button} from "@chakra-ui/core";
 import {css} from "emotion";
 import {ProjectIndex, Project} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
-import {AlignmentList} from "./AlignmentList";
 import { ProjectFiles } from "./ProjectFiles";
 import {ItemSet, Item} from "../../components/Item";
 
@@ -116,7 +115,5 @@ function ProjectRow(props: {
         }}>Change</Button>
       </div>
     </h4>
-
-    <AlignmentList />
   </div>
 }

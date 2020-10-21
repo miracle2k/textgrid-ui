@@ -64,6 +64,7 @@ export class Project extends EventEmitter {
         continue;
       }
 
+      // Load the info file
       let info: string;
       try {
         const infoFile = await entry.getFileHandle("INFO");
@@ -72,9 +73,17 @@ export class Project extends EventEmitter {
         info = "";
       }
 
+      // Load the diff file
+      let diff: any;
+      try {
+        const diffFile = await entry.getFileHandle("diff.json");
+        diff = JSON.parse(await readFile(await diffFile.getFile(), 'string'))
+      } catch (e) {
+      }
+
       const baseName = removeExtension(entry.name);
       if (!runs[baseName]) {
-        runs[baseName] = new Run(entry, {info});
+        runs[baseName] = new Run(entry, {info, diff});
       }
     }
 
@@ -121,18 +130,26 @@ function getExtension(filename: string) {
   return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
 }
 
+export type Diff = {
+  stats: any,
+  files: any,
+  thresholds: number[]
+}
+
 export class Run extends EventEmitter {
   directory: FileSystemDirectoryHandle
-  stats?: any
   public grids?: {[group: string]: { [name: string]: FileSystemFileHandle }}
-  public info: string;
+  public readonly info: string;
+  public readonly diff: Diff|undefined;
 
   constructor(file: FileSystemDirectoryHandle, opts: {
-    info: string
+    info: string,
+    diff?: Diff
   }) {
     super();
     this.directory = file;
     this.info = opts?.info;
+    this.diff = opts?.diff;
   }
 
   // Load all grid files in this directory

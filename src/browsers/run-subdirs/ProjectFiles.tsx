@@ -35,6 +35,10 @@ export function ProjectFiles(props: {
           <tr>
             <th>ID</th>
             <th>Description</th>
+            <th>15ms</th>
+            <th>50ms</th>
+            <th>100ms</th>
+            <th>500ms</th>
           </tr>
         </thead>
         <tbody>
@@ -48,6 +52,12 @@ export function ProjectFiles(props: {
               <td>
                 {run.info}
               </td>
+
+              {run.diff ? <>
+                {run.diff.stats.average.map((value: any) => {
+                  return <td>{value}%</td>
+                })}
+              </> : null}
             </tr>
           })}
         </tbody>
@@ -83,14 +93,32 @@ export function RunComponent(props: {
     {({ height, width }: any) => (
         <List
             height={height}
-            rowHeight={30}
+            rowHeight={20}
             rowRenderer={({ index, key, style }: any) => {
               const {fileId, file, groupId} = items[index];
-              return <div key={key} style={style}>
-                <a href={""} onClick={e => {
-                  e.preventDefault();
-                  props.openTextgridItem(groupId, fileId, file);
-                }}>{file.name}</a>
+
+              return <div key={key} style={{...style, display: 'flex', flexDirection: 'row'}} >
+                <div style={{flex: 1}}>
+                  <a href={""} onClick={e => {
+                    e.preventDefault();
+                    props.openTextgridItem(groupId, fileId, file);
+                  }}>{file.name}</a>
+                </div>
+
+
+                {(props.run.diff?.files[`${groupId}/${fileId}.TextGrid`] ?? ['-', '-', '-', '-']).map((value: any) => {
+                  let content;
+                  if (value === '-') {
+                    content = "?";
+                  }
+                  else if (parseInt(value) === 0) {
+                    content = '-';
+                  }
+                  else {
+                    content = `${value}%`;
+                  }
+                  return <div style={{width: '100px'}}>{content}</div>
+                })}
               </div>
             }}
             width={width}
