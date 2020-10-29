@@ -31,17 +31,11 @@ export function MainRunSubdirs() {
     `}>
       <Tabs style={{display: 'flex', flexDirection: 'column', flex: 1}}>
         <TabList>
-          <Tab>Dashboard</Tab>
           <Tab>Browse Project</Tab>
-          <Tab>Loaded Grids</Tab>
+          <Tab>Projects</Tab>
         </TabList>
 
         <TabPanels style={{display: 'flex', flexDirection: 'column', flex: 1}}>
-          <TabPanel>
-            <Dashboard index={projectIndex} onProjectSelect={project => {
-              setSelectedProject(project)
-            }}/>
-          </TabPanel>
           <TabPanel className={css`
             :not([hidden]) {
               display: flex;
@@ -49,12 +43,25 @@ export function MainRunSubdirs() {
               flex: 1;
             }
           `}>
-            {selectedProject ? <ProjectFiles project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
+            <div className={css`
+              display: flex;
+              flex-direction: row;
+              flex: 1;
+          `}>
+              <div style={{flex: 1}}>
+                {items.map((item, idx) => {
+                  return <Item item={item} key={idx} />
+                })}
+              </div>
+              <div style={{flex: 1, display: 'flex', flexDirection: 'row'}}>
+                {selectedProject ? <ProjectFiles project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
+              </div>
+            </div>
           </TabPanel>
           <TabPanel>
-            {items.map((item, idx) => {
-              return <Item item={item} key={idx} />
-            })}
+            <Dashboard index={projectIndex} onProjectSelect={project => {
+              setSelectedProject(project)
+            }}/>
           </TabPanel>
         </TabPanels>
       </Tabs>

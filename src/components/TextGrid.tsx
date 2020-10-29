@@ -63,7 +63,7 @@ export function Tier(props: {
         font-size: 24px;
         border-radius: 4px;
         position: relative;
-        height: 30px;
+        height: 35px;
   `}>
     {
       tier.entryList.map((entry: any, idx: number) => {
@@ -74,12 +74,12 @@ export function Tier(props: {
         const left = from * pixelsPerSecond;
         const width = (to - from) * pixelsPerSecond;
 
-        return <div key={idx} className={css`
+        return <div key={idx} style={{left: `${left}px`, width: `${width}px`}} className={css`
                     position: absolute;
                     border: 1px solid silver;
                     margin: 1px;
                     cursor: pointer;
-                    font-size: 16px;
+                    font-size: 14px;
 
                     display: flex;
                     flex-direction: column;
@@ -87,12 +87,14 @@ export function Tier(props: {
                     justify-content: center;
 
                     top: 0;
-                    bottom: 0;
-                    left: ${left}px;
-                    width: ${width}px;
+                    bottom: 0;                    
 
                     .times {
                         font-size: 8px;
+                        white-space: nowrap;
+                        text-overflow: clip;
+                        overflow: hidden;
+                        text-align: center;
                     }
                 `}
                     onClick={() => {
@@ -100,7 +102,7 @@ export function Tier(props: {
                     }}>
           {label}
 
-          <div className="times">{from} - {to}</div>
+          <div className="times" style={{width: `${width}px`}}>{from} - {to}</div>
         </div>
       })
     }

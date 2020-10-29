@@ -1,6 +1,6 @@
 import useSound from 'use-sound';
 import React, { useEffect, useState } from 'react';
-import { css } from '@emotion/core'
+import { css } from 'emotion'
 import 'howler';
 import {verifyPermission} from "../utils/verifyPermission";
 import { TextGrid } from './TextGrid';
@@ -137,7 +137,7 @@ export function Item(props: {
     sound.play("clickedSprite");
   }
 
-  return <div css={css`
+  return <div className={css`
         margin: 40px 10px;
         overflow: scroll;
         strong {

@@ -6,6 +6,7 @@ import {AutoSizer, List} from "react-virtualized";
 import { Checkbox, Heading } from "@chakra-ui/core";
 import {ItemSet} from "../../components/Item";
 import GeoPattern from "geopattern";
+import {css} from "emotion";
 
 export function ProjectFiles(props: {
   project: Project,
@@ -63,6 +64,9 @@ export function ProjectFiles(props: {
     props.openTextgridItem(item);
   }
 
+  const runs = props.project.getRuns();
+  runs.sort((a, b) => a.id.localeCompare(b.id))
+
   return <div style={{padding: 20, flex: 1, display: 'flex', flexDirection: 'column'}}>
     <div>
       <Heading size="md">Runs</Heading>
@@ -80,8 +84,8 @@ export function ProjectFiles(props: {
           </tr>
         </thead>
         <tbody>
-          {props.project.getRuns().map(run => {
-            return <tr>
+          {runs.map(run => {
+            return <tr key={run.id}>
               <td style={{verticalAlign: 'middle'}}>
                 <Checkbox
                   display={"block"}
@@ -139,11 +143,16 @@ export function RunComponent(props: {
     {({ height, width }: any) => (
         <List
             height={height}
-            rowHeight={20}
+            rowHeight={24}
             rowRenderer={({ index, key, style }: any) => {
               const {fileId, file, groupId} = items[index];
 
-              return <div key={key} style={{...style, display: 'flex', flexDirection: 'row'}} >
+              return <div key={key} style={{...style, display: 'flex', flexDirection: 'row'}} className={css`
+                border-bottom: 1px solid #eeeeee;
+                &:hover {
+                  background-color: #EEEEEE;
+                }
+              `}>
                 <div style={{flex: 1}}>
                   <a href={""} onClick={e => {
                     e.preventDefault();
@@ -163,7 +172,7 @@ export function RunComponent(props: {
                   else {
                     content = `${value}%`;
                   }
-                  return <div style={{width: '100px'}}>{content}</div>
+                  return <div style={{width: '70px'}}>{content}</div>
                 })}
               </div>
             }}

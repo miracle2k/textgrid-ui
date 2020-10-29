@@ -69,6 +69,7 @@ export class Project extends EventEmitter {
       try {
         const infoFile = await entry.getFileHandle("INFO");
         info = await readFile(await infoFile.getFile(), 'string')
+        info = info.split("\n")[0]
       } catch (e) {
         info = "";
       }
