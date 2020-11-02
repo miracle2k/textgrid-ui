@@ -84,15 +84,14 @@ export function ProjectFiles(props: {
         style={{flex: 1}}
         elementStyle={(dimension: any, size: any, gutterSize: any) => {
           return {
-            'height': 'calc(' + size + '% - ' + gutterSize + 'px)',
-            overflowY: 'scroll'
+            'height': 'calc(' + size + '% - ' + gutterSize + 'px)'
           }
         }}
         gutterStyle={() => {
           return { 'height': '10px', backgroundColor: 'silver'}
         }}
     >
-      <Tabs>
+      <Tabs style={{overflowY: 'scroll'}}>
         <TabList>
           <Tab>Runs</Tab>
           <Tab>Corpora</Tab>
@@ -165,7 +164,8 @@ export function CorporaList(props: {
                 <div style={{
                   display: 'flex',
                   flexDirection: 'row',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  flex: 1
                 }}>
                   <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundSize: '120%', backgroundImage: GeoPattern.generate(run.id).toDataUrl()}} />
                   <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
@@ -174,6 +174,18 @@ export function CorporaList(props: {
                   <div>
                     {getRunDesc(run)}
                   </div>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  {run.diff ? <>
+                    {run.diff.groups?.[corpid]?.stats.average.map((value: any) => {
+                      return <div style={{width: 60}}>{value}%</div>
+                    })}
+                  </> : null}
                 </div>
               </div>
             })
@@ -274,6 +286,7 @@ export function RunComponent(props: {
     return <>Loading...</>
   }
 
+  // Parse each grid in the run
   let items: {groupId: string, fileId: string, file: FileSystemFileHandle}[] = [];
   Object.entries(props.run.grids).forEach(([groupId, fileGroup]) => {
     return Object.entries(fileGroup).forEach(([fileId, file]) => {
@@ -302,20 +315,8 @@ export function RunComponent(props: {
                   }}>{file.name}</a>
                 </div>
 
+                <DiffCells run={props.run} groupId={groupId} fileId={fileId} />
 
-                {(props.run.diff?.files[`${groupId}/${fileId}.TextGrid`] ?? ['-', '-', '-', '-']).map((value: any) => {
-                  let content;
-                  if (value === '-') {
-                    content = "?";
-                  }
-                  else if (parseInt(value) === 0) {
-                    content = '-';
-                  }
-                  else {
-                    content = `${value}%`;
-                  }
-                  return <div style={{width: '70px'}}>{content}</div>
-                })}
               </div>
             }}
             width={width}
@@ -323,4 +324,26 @@ export function RunComponent(props: {
         />
     )}
   </AutoSizer>
+}
+
+
+function DiffCells(props: {
+  run: Run,
+  groupId: string,
+  fileId: string
+}) {
+  const {groupId, fileId} = props;
+  return (props.run.diff?.files[`${groupId}/${fileId}.TextGrid`] ?? ['-', '-', '-', '-']).map((value: any) => {
+    let content;
+    if (value === '-') {
+      content = "?";
+    }
+    else if (parseFloat(value) === 0) {
+      content = <span style={{color: 'gray'}}>✓</span>;
+    }
+    else {
+      content = `${(value * 100).toFixed(1)}%`;
+    }
+    return <div style={{width: '70px'}}>{content}</div>
+  })
 }

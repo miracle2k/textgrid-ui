@@ -143,6 +143,12 @@ function getExtension(filename: string) {
 export type Diff = {
   stats: any,
   files: any,
+  groups?: {
+    [key: string]: {
+      stats: any,
+      files: any,
+    }
+  }
   thresholds: number[]
 }
 
