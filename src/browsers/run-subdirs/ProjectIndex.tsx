@@ -3,6 +3,7 @@ import {openDB} from "idb";
 import {IDBPDatabase} from "idb/build/esm/entry";
 import {verifyPermission} from "../../utils/verifyPermission";
 import {readFile} from "../../components/Item";
+import YAML from 'yaml'
 
 
 type ProjectRecord = {
@@ -49,7 +50,6 @@ export class Project extends EventEmitter {
 
     if (this.record.audioFolder) {
       this.audioFiles = await Project.indexGroupOfFiles(this.record.audioFolder, ['wav', 'mp3'])
-      console.log(this.audioFiles)
     }
 
     this.emit("update");
@@ -65,13 +65,22 @@ export class Project extends EventEmitter {
       }
 
       // Load the info file
-      let info: string;
+      let info: any;
       try {
         const infoFile = await entry.getFileHandle("INFO");
-        info = await readFile(await infoFile.getFile(), 'string')
-        info = info.split("\n")[0]
+        const contents = await readFile(await infoFile.getFile(), 'string')
+        info = YAML.parse(contents)
+
+        if (info.corpora) {
+          info.corpora = info.corpora.map((item: any) => {
+            if (typeof item == 'string') {
+              return {name: item}
+            }
+            return item;
+          })
+        }
       } catch (e) {
-        info = "";
+        info = {};
       }
 
       // Load the diff file
@@ -137,15 +146,21 @@ export type Diff = {
   thresholds: number[]
 }
 
+export type RunInfo = {
+  type: 'train'|'align',
+  corpora: { name: string, subset?: string, speaker?: boolean }[] ,
+  description: string
+}
+
 export class Run extends EventEmitter {
   directory: FileSystemDirectoryHandle
   public id: string;
   public grids?: {[group: string]: { [name: string]: FileSystemFileHandle }}
-  public readonly info: string;
+  public readonly info: RunInfo;
   public readonly diff: Diff|undefined;
 
   constructor(id: string, file: FileSystemDirectoryHandle, opts: {
-    info: string,
+    info: RunInfo,
     diff?: Diff
   }) {
     super();

@@ -8,7 +8,7 @@ import GeoPattern from 'geopattern';
 
 
 export type ItemContextType = {
-  play: (from: number, to: number) => void
+  play: (from: number, to?: number) => void
 };
 const ItemContext = React.createContext<ItemContextType|null>(null);
 
@@ -123,15 +123,16 @@ export function Item(props: {
     return () => {
       URL.revokeObjectURL(objectURL);
     }
-  }, [audioFile])
+  }, [audioFile]);
 
   const [playInternal, {sound}] = useSound(audioUrl, {
     // @ts-ignore
     format: ['mp3'],
   });
 
-  const play = (from: number, to: number) => {
+  const play = (from: number, to?: number) => {
     // https://github.com/goldfire/howler.js/issues/535
+    to = to ?? 99;
     sound._sprite.clickedSprite = [from * 1000, (to-from) * 1000];
     //playInternal();
     sound.play("clickedSprite");

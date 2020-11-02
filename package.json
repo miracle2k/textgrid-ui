@@ -21,9 +21,11 @@
     "react-dom": "^16.13.1",
     "react-dropzone": "^11.0.1",
     "react-scripts": "3.4.1",
+    "react-split": "^2.0.9",
     "react-virtualized": "^9.21.2",
     "typescript": "^3.9.3",
-    "use-sound": "^1.0.2"
+    "use-sound": "^1.0.2",
+    "yaml": "^1.10.0"
   },
   "scripts": {
     "start": "react-scripts start",

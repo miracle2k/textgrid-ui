@@ -3,10 +3,12 @@ import {Project, Run} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
 import {OpenTextGridItem} from "./Main";
 import {AutoSizer, List} from "react-virtualized";
-import { Checkbox, Heading } from "@chakra-ui/core";
+import { Checkbox, Heading, TabList, Tabs, Tab, TabPanels, TabPanel } from "@chakra-ui/core";
 import {ItemSet} from "../../components/Item";
 import GeoPattern from "geopattern";
 import {css} from "emotion";
+import Split from 'react-split'
+
 
 export function ProjectFiles(props: {
   project: Project,
@@ -68,57 +70,197 @@ export function ProjectFiles(props: {
   runs.sort((a, b) => a.id.localeCompare(b.id))
 
   return <div style={{padding: 20, flex: 1, display: 'flex', flexDirection: 'column'}}>
-    <div>
-      <Heading size="md">Runs</Heading>
 
-      <table>
-        <thead>
-          <tr>
-            <th></th>
-            <th>ID</th>
-            <th>Description</th>
-            <th>15ms</th>
-            <th>50ms</th>
-            <th>100ms</th>
-            <th>500ms</th>
-          </tr>
-        </thead>
-        <tbody>
-          {runs.map(run => {
-            return <tr key={run.id}>
-              <td style={{verticalAlign: 'middle'}}>
-                <Checkbox
-                  display={"block"}
-                  isChecked={selectedRuns.indexOf(run) > -1}
-                  onChange={e => toggleChecked(run, e.target.checked)}
-                />
-              </td>
-              <td>
-                <a href="" onClick={(e) => handleBrowse(e, run)}>
-                  {run.directory.name}
-                </a>
-              </td>
-              <td>
-                <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundSize: '120%', backgroundImage: GeoPattern.generate(run.id).toDataUrl()}} />
-                {run.info}
-              </td>
+    <Split
+        sizes={[25, 75]}
+        minSize={100}
+        expandToMin={false}
+        gutterSize={10}
+        gutterAlign="center"
+        snapOffset={30}
+        dragInterval={1}
+        direction="vertical"
+        cursor="row-resize"
+        style={{flex: 1}}
+        elementStyle={(dimension: any, size: any, gutterSize: any) => {
+          return {
+            'height': 'calc(' + size + '% - ' + gutterSize + 'px)',
+            overflowY: 'scroll'
+          }
+        }}
+        gutterStyle={() => {
+          return { 'height': '10px', backgroundColor: 'silver'}
+        }}
+    >
+      <Tabs>
+        <TabList>
+          <Tab>Runs</Tab>
+          <Tab>Corpora</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <RunsList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} />
+          </TabPanel>
+          <TabPanel>
+            <CorporaList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
 
-              {run.diff ? <>
-                {run.diff.stats.average.map((value: any) => {
-                  return <td>{value}%</td>
-                })}
-              </> : null}
-            </tr>
-          })}
-        </tbody>
-      </table>
-    </div>
-
-    {currentRun ? <div style={{flex: 1}}>
-      <h5>Browse Run</h5>
-      <RunComponent run={currentRun} openTextgridItem={handleOpenTextGridItem} />
-    </div> : null}
+      <div style={{flex: 1}}>
+        {currentRun ? <>
+            <h5>Browse Run</h5>
+            <RunComponent run={currentRun} openTextgridItem={handleOpenTextGridItem} />
+            </> : null}
+      </div>
+    </Split>
   </div>
+}
+
+export function CorporaList(props: {
+  runs: Run[],
+  handleBrowse: any,
+  selectedRuns: Run[],
+  toggleChecked: any,
+}) {
+  const {runs, selectedRuns, toggleChecked, handleBrowse} = props;
+
+  // group by corpora
+  const result: { [key: string]: Run[] } = {};
+  for (const run of props.runs) {
+    for (const corpid of run.info.corpora ?? []) {
+      if (!result[corpid.name]) {
+        result[corpid.name] = [];
+      }
+      result[corpid.name].push(run);
+    }
+  }
+
+  return <div>
+    {
+      Object.entries(result).map(([corpid, runs]) => {
+        return <div key={corpid}>
+          <div style={{fontWeight: 'bold', fontSize: '18px'}}>{corpid}</div>
+          {
+            runs.map(run => {
+              return <div key={run.id} style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <Checkbox
+                      display={"block"}
+                      isChecked={selectedRuns.indexOf(run) > -1}
+                      onChange={e => toggleChecked(run, e.target.checked)}
+                  />
+                </div>
+
+                <div style={{width: '90px'}}>
+                  <a href="" onClick={(e) => props.handleBrowse(e, run)}>
+                    {run.id}
+                  </a>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundSize: '120%', backgroundImage: GeoPattern.generate(run.id).toDataUrl()}} />
+                  <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
+                    {run.info?.type}
+                  </div>
+                  <div>
+                    {getRunDesc(run)}
+                  </div>
+                </div>
+              </div>
+            })
+          }
+        </div>
+      })
+    }
+  </div>
+}
+
+
+function getRunDesc(run: Run) {
+  return (run.info?.corpora ?? []).map(x => {
+    let parts = [];
+    if (x.subset) {
+      parts.push(x.subset);
+    }
+    if (x.speaker) {
+      parts.push('speaker');
+    }
+    if (parts.length) {
+      return `${x.name} [${parts}]`;
+    }
+    return x.name;
+  }).join(", ");
+}
+
+export function RunsList(props: {
+  runs: Run[],
+  selectedRuns: Run[],
+  toggleChecked: any,
+  handleBrowse: any
+}) {
+  const {runs, selectedRuns, toggleChecked, handleBrowse} = props;
+
+  return <table>
+    <thead>
+    <tr>
+      <th></th>
+      <th>ID</th>
+      <th>Description</th>
+      <th>15ms</th>
+      <th>50ms</th>
+      <th>100ms</th>
+      <th>500ms</th>
+    </tr>
+    </thead>
+    <tbody>
+    {runs.map(run => {
+      return <tr key={run.id}>
+        <td style={{verticalAlign: 'middle'}}>
+          <Checkbox
+              display={"block"}
+              isChecked={selectedRuns.indexOf(run) > -1}
+              onChange={e => toggleChecked(run, e.target.checked)}
+          />
+        </td>
+        <td>
+          <a href="" onClick={(e) => handleBrowse(e, run)}>
+            {run.directory.name}
+          </a>
+        </td>
+        <td>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center'
+          }}>
+            <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundSize: '120%', backgroundImage: GeoPattern.generate(run.id).toDataUrl()}} />
+            <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
+              {run.info?.type}
+            </div>
+            <div>
+              {getRunDesc(run)}
+            </div>
+          </div>
+        </td>
+
+        {run.diff ? <>
+          {run.diff.stats.average.map((value: any) => {
+            return <td>{value}%</td>
+          })}
+        </> : null}
+      </tr>
+    })}
+    </tbody>
+  </table>
 }
 
 

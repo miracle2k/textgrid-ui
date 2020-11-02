@@ -97,9 +97,13 @@ export function Tier(props: {
                         text-align: center;
                     }
                 `}
-                    onClick={() => {
-                      item!.play(from, to);
-                    }}>
+                onClick={() => {
+                  item!.play(from, to);
+                }}
+                onDoubleClick={() => {
+                  item!.play(0);
+                }}
+        >
           {label}
 
           <div className="times" style={{width: `${width}px`}}>{from} - {to}</div>
