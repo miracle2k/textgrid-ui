@@ -5,6 +5,7 @@ import {ProjectIndex, Project} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
 import { ProjectFiles } from "./ProjectFiles";
 import {ItemSet, Item} from "../../components/Item";
+import Split from "react-split";
 
 
 export type OpenTextGridItem = (groupId: string, fileId: string, item: FileSystemFileHandle) => void;
@@ -48,14 +49,35 @@ export function MainRunSubdirs() {
               flex-direction: row;
               flex: 1;
           `}>
-              <div style={{flex: 1}}>
-                {items.map((item, idx) => {
-                  return <Item item={item} key={idx} />
-                })}
-              </div>
-              <div style={{flex: 1, display: 'flex', flexDirection: 'row'}}>
-                {selectedProject ? <ProjectFiles project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
-              </div>
+              <Split
+                  sizes={[25, 75]}
+                  minSize={100}
+                  expandToMin={false}
+                  gutterSize={10}
+                  gutterAlign="center"
+                  snapOffset={30}
+                  dragInterval={1}
+                  direction="horizontal"
+                  cursor="col-resize"
+                  style={{flex: 1, display: 'flex', flexDirection: 'row'}}
+                  elementStyle={(dimension: any, size: any, gutterSize: any) => {
+                    return {
+                      'width': 'calc(' + size + '% - ' + gutterSize + 'px)'
+                    }
+                  }}
+                  gutterStyle={() => {
+                    return { 'width': '10px', backgroundColor: 'silver'}
+                  }}
+              >
+                <div>
+                  {items.map((item, idx) => {
+                    return <Item item={item} key={idx} />
+                  })}
+                </div>
+                <div style={{display: 'flex', flexDirection: 'row'}}>
+                  {selectedProject ? <ProjectFiles project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
+                </div>
+              </Split>
             </div>
           </TabPanel>
           <TabPanel>

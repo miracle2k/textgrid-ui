@@ -70,7 +70,6 @@ export function ProjectFiles(props: {
   runs.sort((a, b) => a.id.localeCompare(b.id))
 
   return <div style={{padding: 20, flex: 1, display: 'flex', flexDirection: 'column'}}>
-
     <Split
         sizes={[25, 75]}
         minSize={100}
@@ -91,13 +90,19 @@ export function ProjectFiles(props: {
           return { 'height': '10px', backgroundColor: 'silver'}
         }}
     >
-      <Tabs style={{overflowY: 'scroll'}}>
+      <Tabs style={{display: 'flex', flexDirection: 'column', flex: 1}}>
         <TabList>
           <Tab>Runs</Tab>
           <Tab>Corpora</Tab>
         </TabList>
-        <TabPanels>
-          <TabPanel>
+        <TabPanels style={{display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto'}}>
+          <TabPanel  className={css`
+            :not([hidden]) {
+              display: flex;
+              flex-direction: column;
+              flex: 1;              
+            }
+          `}>
             <RunsList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} />
           </TabPanel>
           <TabPanel>
