@@ -50,7 +50,7 @@ export function MainRunSubdirs() {
               flex: 1;
           `}>
               <Split
-                  sizes={[25, 75]}
+                  sizes={[80, 20]}
                   minSize={100}
                   expandToMin={false}
                   gutterSize={10}
@@ -62,19 +62,28 @@ export function MainRunSubdirs() {
                   style={{flex: 1, display: 'flex', flexDirection: 'row'}}
                   elementStyle={(dimension: any, size: any, gutterSize: any) => {
                     return {
-                      'width': 'calc(' + size + '% - ' + gutterSize + 'px)'
+                      'width': 'calc(' + size + '% - ' + gutterSize + 'px)',
                     }
                   }}
                   gutterStyle={() => {
-                    return { 'width': '10px', backgroundColor: 'silver'}
+                    return { 'width': '1px', borderLeft: '2px dotted #dadaff'}
                   }}
               >
-                <div>
-                  {items.map((item, idx) => {
-                    return <Item item={item} key={idx} />
-                  })}
+                <div style={{position: 'relative'}}>
+                  <div className={css`
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    overflow: auto;
+                  `}>
+                    {items.map((item, idx) => {
+                      return <Item item={item} key={idx} />
+                    })}
+                  </div>
                 </div>
-                <div style={{display: 'flex', flexDirection: 'row'}}>
+                <div style={{display: 'flex', flexDirection: 'row', overflow: 'hidden'}}>
                   {selectedProject ? <ProjectFiles project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
                 </div>
               </Split>

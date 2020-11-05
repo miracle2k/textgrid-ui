@@ -138,9 +138,9 @@ export function Item(props: {
     sound.play("clickedSprite");
   }
 
-  return <div className={css`
+  return <div
+      className={css`
         margin: 40px 10px;
-        overflow: scroll;
         strong {
             color: silver;
             font-weight: normal;

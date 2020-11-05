@@ -33,7 +33,11 @@ export function TextGrid(props: {
       ...props.handleStyle
     }} />
 
-    <div>
+    <div style={{
+      flex: 1,
+      overflow: 'auto',
+      paddingBottom: '10px'
+    }}>
       {tg.tierNameList.map((name: string, idx: number) => {
         return <Tier tier={tg.tierDict[name]} key={idx} />
       })}
@@ -55,7 +59,8 @@ export function Tier(props: {
   const item = useItem();
   const {tier} = props;
   const maxValue = tier.maxTimestamp;
-  const pixelsPerSecond = 500;
+
+  const pixelsPerSecond = 100;
 
 
   return <div className={css`
@@ -74,35 +79,37 @@ export function Tier(props: {
         const left = from * pixelsPerSecond;
         const width = (to - from) * pixelsPerSecond;
 
-        return <div key={idx} style={{left: `${left}px`, width: `${width}px`}} className={css`
-                    position: absolute;
-                    border: 1px solid silver;
-                    margin: 1px;
-                    cursor: pointer;
-                    font-size: 14px;
-
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-
-                    top: 0;
-                    bottom: 0;                    
-
-                    .times {
-                        font-size: 8px;
-                        white-space: nowrap;
-                        text-overflow: clip;
-                        overflow: hidden;
-                        text-align: center;
-                    }
-                `}
-                onClick={() => {
-                  item!.play(from, to);
-                }}
-                onDoubleClick={() => {
-                  item!.play(0);
-                }}
+        return <div
+            key={idx} style={{left: `${left}px`, width: `${width}px`}}
+            className={css`
+              position: absolute;
+              border: 1px solid silver;
+              margin: 1px;
+              cursor: pointer;
+              font-size: 14px;
+    
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+    
+              top: 0;
+              bottom: 0;                    
+    
+              .times {
+                  font-size: 8px;
+                  white-space: nowrap;
+                  text-overflow: clip;
+                  overflow: hidden;
+                  text-align: center;
+              }
+          `}
+          onClick={() => {
+            item!.play(from, to);
+          }}
+          onDoubleClick={() => {
+            item!.play(0);
+          }}
         >
           {label}
 

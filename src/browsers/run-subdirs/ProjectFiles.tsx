@@ -69,7 +69,7 @@ export function ProjectFiles(props: {
   const runs = props.project.getRuns();
   runs.sort((a, b) => a.id.localeCompare(b.id))
 
-  return <div style={{padding: 20, flex: 1, display: 'flex', flexDirection: 'column'}}>
+  return <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
     <Split
         sizes={[25, 75]}
         minSize={100}
@@ -87,7 +87,7 @@ export function ProjectFiles(props: {
           }
         }}
         gutterStyle={() => {
-          return { 'height': '10px', backgroundColor: 'silver'}
+          return { 'height': '1px', borderTop: '2px dotted #dadaff'}
         }}
     >
       <Tabs style={{display: 'flex', flexDirection: 'column', flex: 1}}>
@@ -111,9 +111,9 @@ export function ProjectFiles(props: {
         </TabPanels>
       </Tabs>
 
-      <div style={{flex: 1}}>
+      <div style={{flex: 1, padding : 10}}>
         {currentRun ? <>
-            <h5>Browse Run</h5>
+            <strong>Browse Run</strong>
             <RunComponent run={currentRun} openTextgridItem={handleOpenTextGridItem} />
             </> : null}
       </div>
@@ -313,7 +313,10 @@ export function RunComponent(props: {
                   background-color: #EEEEEE;
                 }
               `}>
-                <div style={{flex: 1}}>
+                <div style={{flex: 1}} className={css`
+                  text-overflow: ellipsis;
+                  overflow: hidden;
+                `}>
                   <a href={""} onClick={e => {
                     e.preventDefault();
                     props.openTextgridItem(groupId, fileId, file);
