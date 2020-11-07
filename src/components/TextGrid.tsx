@@ -28,13 +28,19 @@ export function TextGrid(props: {
   const handleMouseDown = useCallback((e: any) => {
     const rect = parent.current.getBoundingClientRect()
     const posX = e.clientX - rect.x;
-    item?.sound.seek(posX / pixelsPerSecond);
+    item?.sound.seek(posX / pixelsPerSecond, item?.soundId);
   }, [item, pixelsPerSecond]);
 
   const handleWheel = useCallback((e: any) => {
     const deltaY = e.deltaY;
     setPixelsPerSecond(p => Math.min(p + deltaY, 1000))
   }, []);
+
+  const handleKeyPress = useCallback((e: any) => {
+    if (e.key === ' ') {
+      item?.toggle()
+    }
+  }, [item]);
 
   if (!tg) {
     return <React.Fragment>(no text grid)</React.Fragment>;
@@ -50,6 +56,7 @@ export function TextGrid(props: {
     }} />
 
     <div
+      tabIndex={1}
       style={{
         flex: 1,
         overflow: 'auto',
@@ -57,6 +64,7 @@ export function TextGrid(props: {
         position: 'relative'
       }}
       onMouseDown={handleMouseDown}
+      onKeyPress={handleKeyPress}
       onWheel={handleWheel}
       ref={parent}
     >
@@ -155,11 +163,7 @@ export function Tier(props: {
               }
           `}
           onMouseDown={(e) => {
-            item?.play(from, to);
-            e.stopPropagation();
-          }}
-          onDoubleClick={(e) => {
-            item?.play(0);
+            item?.play({from, to});
             e.stopPropagation();
           }}
         >

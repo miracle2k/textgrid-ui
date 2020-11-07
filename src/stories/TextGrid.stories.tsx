@@ -1,14 +1,12 @@
 import React from 'react';
 import {TextGrid} from "../components/TextGrid";
 import {Meta, Story} from "@storybook/react";
+import {Item, ItemSet} from '../components/Item';
 
 
 export default {
   title: 'TextGrid',
   component: TextGrid,
-  argTypes: {
-    backgroundColor: { control: 'color' },
-  },
 } as Meta;
 
 const Template: Story<any> = (args) => {
@@ -17,10 +15,15 @@ const Template: Story<any> = (args) => {
   </div>
 };
 
-export const Primary = Template.bind({});
-Primary.args = {
-  primary: true,
-  label: 'Button',
+export const TextGridOnly = Template.bind({});
+
+export const PlayableItem: Story<any> = (args) => {
+  const item = new ItemSet("foo.mp3");
+  item.grids = [buffer, buffer];
+  item.audio = 'https://file-examples-com.github.io/uploads/2017/11/file_example_MP3_700KB.mp3';
+  return <div style={{backgroundColor: '#FAFAFA'}}>
+    <Item item={item} />
+  </div>
 };
 
 

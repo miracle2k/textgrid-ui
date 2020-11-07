@@ -54,7 +54,7 @@ export function ProjectFiles(props: {
 
     const selectedGridFiles = (await Promise.all(runsToOpen.map(async run => {
       await run.loadGrids();
-      return {run, file: run.grids?.[groupId][fileId]!};
+      return {run, file: run.grids?.[groupId]?.[fileId]!};
     }))).filter(x => !!x.file);
 
     const item: ItemSet = new ItemSet(fileId);

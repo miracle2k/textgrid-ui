@@ -8,7 +8,8 @@ import GeoPattern from 'geopattern';
 
 
 export type ItemContextType = {
-  play: (from: number, to?: number) => void,
+  play: (opts?: {from?: number, to?: number}) => void,
+  toggle: () => void,
 
   // When using the howler sound object directly, be sure to use it with "soundId" to get the one that is newest.
   sound: any,
@@ -23,8 +24,8 @@ export function useItem() {
 
 export class ItemSet {
   name: string = "";
-  audio?: File|FileSystemFileHandle|null = null;
-  grids: (File|FileSystemFileHandle)[] = [];
+  audio?: File|FileSystemFileHandle|string|null = null;
+  grids: (File|FileSystemFileHandle|string)[] = [];
   patternSeeds?: string[];
 
   constructor(name: string) {
@@ -77,17 +78,24 @@ export function readFile(file: File, as?:  'arraybuffer'|'string'): Promise<Arra
 }
 
 
-export async function readFileHighLevel(file: FileSystemFileHandle|File) {
+export async function readFileHighLevel(file: FileSystemFileHandle|File|string) {
+  if (typeof file === 'string') {
+    return file;
+  }
   return await readFile(await resolveFileHandle(file));
 }
 
 
-export function useResolveAudio(audio: File|FileSystemFileHandle|undefined|null) {
-  const [file, setFile] = useState<File>();
+export function useResolveAudio(audio: File|FileSystemFileHandle|string|undefined|null) {
+  const [file, setFile] = useState<File|string>();
   useEffect(() => {
     (async () => {
       if (audio) {
-        setFile(await resolveFileHandle(audio));
+        if (typeof audio === 'string') {
+          setFile(audio);
+        } else {
+          setFile(await resolveFileHandle(audio));
+        }
       }
     })();
   }, [audio]);
@@ -122,25 +130,40 @@ export function Item(props: {
       setAudioUrl("");
       return;
     }
-    const objectURL = URL.createObjectURL(audioFile);
+
+    let finalUrl: string;
+    let isObjectUrl: boolean = false;
+    if (typeof audioFile === 'string') {
+      finalUrl = audioFile;
+    } else {
+      finalUrl = URL.createObjectURL(audioFile);
+      isObjectUrl = true;
+    }
+
+
     // https://github.com/joshwcomeau/use-sound/issues/23
     window.setTimeout(() => {
-      setAudioUrl(objectURL);
+      setAudioUrl(finalUrl);
     }, 100)
+
     return () => {
-      URL.revokeObjectURL(objectURL);
+      if (isObjectUrl) {
+        URL.revokeObjectURL(finalUrl);
+      }
     }
   }, [audioFile]);
 
-  const [playInternal, {sound}] = useSound(audioUrl, {
+  const [_, {sound}] = useSound(audioUrl, {
     // @ts-ignore
     format: ['mp3'],
   });
 
   const soundId = useRef<any>();
-  const play = (from: number, to?: number) => {
+
+  const play = (opts?: {from?: number, to?: number}) => {
     // https://github.com/goldfire/howler.js/issues/535
-    to = to ?? 99;
+    const to = opts?.to ?? 99;
+    const from = opts?.from ?? sound.seek(soundId.current);
     sound._sprite.clickedSprite = [from * 1000, (to-from) * 1000];
 
     // A pause() should make sure we we re-use the current sound id.
@@ -148,8 +171,17 @@ export function Item(props: {
     soundId.current = sound.play("clickedSprite");
   }
 
+  const toggle = () => {
+    if (sound.playing(soundId)) {
+      sound.pause();
+    } else {
+      play();
+    }
+  }
+
   const contextValue = {
     play,
+    toggle,
     sound,
     soundId: soundId.current
   }
@@ -168,6 +200,7 @@ export function Item(props: {
       {buffers ? buffers.map((buffer: any, idx: number) => {
         const pattern = props.item.patternSeeds? GeoPattern.generate(props.item.patternSeeds?.[idx]) : null;
         return <TextGrid
+          key={idx}
           buffer={buffer}
           handleStyle={{
             backgroundImage: pattern?.toDataUrl()
