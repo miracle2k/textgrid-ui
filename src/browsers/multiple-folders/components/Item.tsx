@@ -82,7 +82,7 @@ export function Item(props: {
         <strong>{props.item.name}</strong>
         <ItemContext.Provider value={{play}}>
             {buffers ? buffers.map((buffer: any, idx: number) => {
-                return <TextGrid buffer={buffer} color={folders?.[idx].color} />
+                return <TextGrid buffer={buffer} pixelsPerSecond={500} />
             }) : null}
         </ItemContext.Provider>
     </div>

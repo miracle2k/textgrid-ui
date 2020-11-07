@@ -5,17 +5,13 @@ import {
 import { css } from 'emotion'
 import {Buffer} from 'buffer';
 import { useItem } from "./Item";
-import {useRaf} from "../utils/useRaf";
 
 
 
 export function TextGrid(props: {
   buffer: string|Buffer,
-  color?: string,
-  handleStyle?: any
+  pixelsPerSecond: number
 }) {
-  const [pixelsPerSecond, setPixelsPerSecond] = useState(300);
-  const parent = useRef<any>();
   const tg = useMemo(() => {
     if (!props.buffer) {
       return null;
@@ -23,93 +19,16 @@ export function TextGrid(props: {
     return parseTextgrid(Buffer.from(props.buffer));
   }, [props.buffer]);
 
-  const item = useItem();
-
-  const handleMouseDown = useCallback((e: any) => {
-    const rect = parent.current.getBoundingClientRect()
-    const posX = e.clientX - rect.x;
-    item?.sound.seek(posX / pixelsPerSecond, item?.soundId);
-  }, [item, pixelsPerSecond]);
-
-  const handleWheel = useCallback((e: any) => {
-    const deltaY = e.deltaY;
-    setPixelsPerSecond(p => Math.min(p + deltaY, 1000))
-  }, []);
-
-  const handleKeyPress = useCallback((e: any) => {
-    if (e.key === ' ') {
-      item?.toggle()
-    }
-  }, [item]);
-
   if (!tg) {
     return <React.Fragment>(no text grid)</React.Fragment>;
   }
 
-  return <div style={{
-    display: 'flex',
-    flexDirection: 'row'
-  }}>
-    <div style={{
-      width: '20px',
-      ...props.handleStyle
-    }} />
-
-    <div
-      tabIndex={1}
-      style={{
-        flex: 1,
-        overflow: 'auto',
-        paddingBottom: '10px',
-        position: 'relative'
-      }}
-      onMouseDown={handleMouseDown}
-      onKeyPress={handleKeyPress}
-      onWheel={handleWheel}
-      ref={parent}
-    >
-      {tg.tierNameList.map((name: string, idx: number) => {
-        return <Tier tier={tg.tierDict[name]} key={idx} pixelsPerSecond={pixelsPerSecond} />
-      })}
-
-      <Cursor pixelsPerSecond={pixelsPerSecond} />
-    </div>
+  return <div>
+    {tg.tierNameList.map((name: string, idx: number) => {
+      return <Tier tier={tg.tierDict[name]} key={idx} pixelsPerSecond={props.pixelsPerSecond} />
+    })}
   </div>
 }
-
-function Cursor(props: {
-  pixelsPerSecond: number
-}) {
-  const {pixelsPerSecond} = props;
-  const item = useItem();
-  const [cursorPos, setCursorPos] = useState(0);
-
-  useRaf(() => {
-    const sound = item?.sound;
-    if (!sound) { return; }
-    if (sound.state() === "unloaded") {
-      return;
-    }
-    const pos = sound.seek(item?.soundId);
-    setCursorPos(pos);
-  })
-
-  return <div className={css`
-    position: absolute;
-    width: 1px;
-    top: 0px;
-    bottom: 0px;
-    background: red;
-  `} style={{left: cursorPos * pixelsPerSecond}} />;
-}
-
-/**
- * work on better/cleaner exports*
- *   add speaker support
- *
- * first test case:
- *    speaker specific vs not
- */
 
 export function Tier(props: {
   tier: any,

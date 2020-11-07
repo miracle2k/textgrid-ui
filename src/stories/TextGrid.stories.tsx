@@ -11,7 +11,7 @@ export default {
 
 const Template: Story<any> = (args) => {
   return <div style={{backgroundColor: '#FAFAFA'}}>
-    <TextGrid buffer={buffer}/>
+    <TextGrid buffer={buffer} pixelsPerSecond={500} />
   </div>
 };
 

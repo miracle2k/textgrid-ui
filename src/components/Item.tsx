@@ -1,10 +1,11 @@
 import useSound from 'use-sound';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import { css } from 'emotion'
 import 'howler';
 import {verifyPermission} from "../utils/verifyPermission";
 import { TextGrid } from './TextGrid';
 import GeoPattern from 'geopattern';
+import {useRaf} from "../utils/useRaf";
 
 
 export type ItemContextType = {
@@ -162,7 +163,7 @@ export function Item(props: {
 
   const play = (opts?: {from?: number, to?: number}) => {
     // https://github.com/goldfire/howler.js/issues/535
-    const to = opts?.to ?? 99;
+    const to = opts?.to ?? 999;
     const from = opts?.from ?? sound.seek(soundId.current);
     sound._sprite.clickedSprite = [from * 1000, (to-from) * 1000];
 
@@ -187,26 +188,136 @@ export function Item(props: {
   }
 
   return <div
-      className={css`
-        margin: 40px 10px;
-        strong {
-            color: silver;
-            font-weight: normal;
-            display: block;
-        }
-    `}>
+    className={css`
+      strong {
+        color: silver;
+        font-weight: normal;
+        display: block;
+      }
+  `}>
     <strong>{props.item.name}</strong>
+
     <ItemContext.Provider value={contextValue}>
-      {buffers ? buffers.map((buffer: any, idx: number) => {
-        const pattern = props.item.patternSeeds? GeoPattern.generate(props.item.patternSeeds?.[idx]) : null;
-        return <TextGrid
-          key={idx}
-          buffer={buffer}
-          handleStyle={{
-            backgroundImage: pattern?.toDataUrl()
-          }}
-        />
-      }) : null}
+      <ScrollableCanvas item={props.item} buffers={buffers} />
     </ItemContext.Provider>
   </div>
+}
+
+function ScrollableCanvas(props: {
+  item: ItemSet,
+  buffers: any
+}) {
+  const scrollContainer = useRef<HTMLDivElement>(null);
+  const [pixelsPerSecond, setPixelsPerSecond] = useState(300);
+  const item = useItem();
+
+  const handleKeyPress = useCallback((e: any) => {
+    if (e.key === ' ') {
+      item?.toggle()
+    }
+  }, [item]);
+
+  const handleMouseDown = useCallback((e: any) => {
+    const rect = scrollContainer.current!.getBoundingClientRect();
+    const posX = e.clientX - rect.x;
+    item?.sound.seek(posX / pixelsPerSecond, item?.soundId);
+  }, [item, pixelsPerSecond]);
+
+  const handleWheel = useCallback((e: any) => {
+    const deltaY = e.deltaY * 0.1;
+    setPixelsPerSecond(p => Math.max(20, Math.min(p + deltaY, 1000)))
+  }, []);
+
+  // TODO: maybe instead of raf, this should be a  more conservative interval, say 100ms
+  useRaf(() => {
+    if (!scrollContainer.current) {
+      return;
+    }
+    const sound = item?.sound;
+    if (!sound) { return; }
+    if (sound.state() === "unloaded") {
+      return;
+    }
+    if (!sound.playing()) {
+      return;
+    }
+    const pos = sound.seek(item?.soundId);
+
+    // Is it in the range?
+    const rect = scrollContainer.current!.getBoundingClientRect();
+    const maxTime = (scrollContainer.current.scrollLeft + rect.width) / pixelsPerSecond;
+    if (pos > maxTime) {
+      scrollContainer.current.scrollTo({
+        left: pos * pixelsPerSecond
+      })
+    }
+  })
+
+  return <div
+    onMouseDown={handleMouseDown}
+    onKeyPress={handleKeyPress}
+    onWheel={handleWheel}
+    ref={scrollContainer}
+    tabIndex={0}
+    className={css`
+      outline: none;
+      overflow: auto;
+      flex: 1;
+      margin-left: 40px; // space for the handles,
+      
+      padding-bottom: 10px;
+      position: relative;
+    `}
+  >
+    {props.buffers ? props.buffers.map((buffer: any, idx: number) => {
+      const pattern = props.item.patternSeeds? GeoPattern.generate(props.item.patternSeeds?.[idx]) : null;
+      return (
+        <div>
+          <div
+            className={css`
+              transform: translateX(-100%);
+              position: fixed;
+              width: 40px;
+              height: 80px;
+            `}
+            style={{backgroundImage: pattern?.toDataUrl()}}
+          />
+
+          <TextGrid
+            key={idx}
+            buffer={buffer}
+            pixelsPerSecond={pixelsPerSecond}
+          />
+        </div>
+      )
+    }) : null}
+
+    <Cursor pixelsPerSecond={pixelsPerSecond} />
+  </div>
+}
+
+function Cursor(props: {
+  pixelsPerSecond: number
+}) {
+  const {pixelsPerSecond} = props;
+  const item = useItem();
+  const [cursorPos, setCursorPos] = useState(0);
+
+  useRaf(() => {
+    const sound = item?.sound;
+    if (!sound) { return; }
+    if (sound.state() === "unloaded") {
+      return;
+    }
+    const pos = sound.seek(item?.soundId);
+    setCursorPos(pos);
+  })
+
+  return <div className={css`
+    position: absolute;
+    width: 1px;
+    top: 0px;
+    bottom: 0px;
+    background: red;
+  `} style={{left: cursorPos * pixelsPerSecond}} />;
 }

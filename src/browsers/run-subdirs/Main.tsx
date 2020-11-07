@@ -77,6 +77,7 @@ export function MainRunSubdirs() {
                     width: 100%;
                     height: 100%;
                     overflow: auto;
+                    padding: 20px;
                   `}>
                     {items.map((item, idx) => {
                       return <Item item={item} key={idx} />
