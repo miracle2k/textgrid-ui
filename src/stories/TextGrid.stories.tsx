@@ -12,7 +12,19 @@ export default {
 } as Meta;
 
 const Template: Story<any> = (args) => {
-  return <TextGrid buffer={`
+  return <div style={{backgroundColor: '#FAFAFA'}}>
+    <TextGrid buffer={buffer}/>
+  </div>
+};
+
+export const Primary = Template.bind({});
+Primary.args = {
+  primary: true,
+  label: 'Button',
+};
+
+
+const buffer = `
 File type = "ooTextFile"
 Object class = "TextGrid"
 
@@ -218,11 +230,4 @@ item []:
 \t\t\t\txmax = 5.12
 \t\t\t\ttext = ""
   
-  `}/>
-};
-
-export const Primary = Template.bind({});
-Primary.args = {
-  primary: true,
-  label: 'Button',
-};
+  `;

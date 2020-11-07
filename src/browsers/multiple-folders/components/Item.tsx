@@ -4,7 +4,6 @@ import { ItemDef, FolderRecord } from '../Items';
 import { TextGrid } from '../../../components/TextGrid';
 import { css } from '@emotion/core'
 import 'howler';
-import {verifyPermission} from "../../../utils/verifyPermission";
 import {DirIndex} from "../FilesystemIndex";
 import {readFileHighLevel, useResolveAudio} from "../../../components/Item";
 

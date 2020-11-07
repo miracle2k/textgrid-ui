@@ -9,7 +9,10 @@ import GeoPattern from 'geopattern';
 
 export type ItemContextType = {
   play: (from: number, to?: number) => void,
-  sound: any
+
+  // When using the howler sound object directly, be sure to use it with "soundId" to get the one that is newest.
+  sound: any,
+  soundId?: number,
 };
 const ItemContext = React.createContext<ItemContextType|null>(null);
 
@@ -139,9 +142,16 @@ export function Item(props: {
     // https://github.com/goldfire/howler.js/issues/535
     to = to ?? 99;
     sound._sprite.clickedSprite = [from * 1000, (to-from) * 1000];
-    //playInternal();
-    if (soundId.current) { sound.pause(soundId.current) }
+
+    // A pause() should make sure we we re-use the current sound id.
+    if (soundId.current) { sound.stop(soundId.current) }
     soundId.current = sound.play("clickedSprite");
+  }
+
+  const contextValue = {
+    play,
+    sound,
+    soundId: soundId.current
   }
 
   return <div
@@ -154,7 +164,7 @@ export function Item(props: {
         }
     `}>
     <strong>{props.item.name}</strong>
-    <ItemContext.Provider value={{play, sound}}>
+    <ItemContext.Provider value={contextValue}>
       {buffers ? buffers.map((buffer: any, idx: number) => {
         const pattern = props.item.patternSeeds? GeoPattern.generate(props.item.patternSeeds?.[idx]) : null;
         return <TextGrid

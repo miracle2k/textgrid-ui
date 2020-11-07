@@ -14,7 +14,7 @@ export function TextGrid(props: {
   color?: string,
   handleStyle?: any
 }) {
-  const pixelsPerSecond = 100;
+  const [pixelsPerSecond, setPixelsPerSecond] = useState(300);
   const parent = useRef<any>();
   const tg = useMemo(() => {
     if (!props.buffer) {
@@ -28,9 +28,13 @@ export function TextGrid(props: {
   const handleMouseDown = useCallback((e: any) => {
     const rect = parent.current.getBoundingClientRect()
     const posX = e.clientX - rect.x;
-    const posY = e.clientY - rect.y;
     item?.sound.seek(posX / pixelsPerSecond);
-  }, [item]);
+  }, [item, pixelsPerSecond]);
+
+  const handleWheel = useCallback((e: any) => {
+    const deltaY = e.deltaY;
+    setPixelsPerSecond(p => Math.min(p + deltaY, 1000))
+  }, []);
 
   if (!tg) {
     return <React.Fragment>(no text grid)</React.Fragment>;
@@ -45,12 +49,17 @@ export function TextGrid(props: {
       ...props.handleStyle
     }} />
 
-    <div style={{
-      flex: 1,
-      overflow: 'auto',
-      paddingBottom: '10px',
-      position: 'relative'
-    }} onMouseDown={handleMouseDown} ref={parent}>
+    <div
+      style={{
+        flex: 1,
+        overflow: 'auto',
+        paddingBottom: '10px',
+        position: 'relative'
+      }}
+      onMouseDown={handleMouseDown}
+      onWheel={handleWheel}
+      ref={parent}
+    >
       {tg.tierNameList.map((name: string, idx: number) => {
         return <Tier tier={tg.tierDict[name]} key={idx} pixelsPerSecond={pixelsPerSecond} />
       })}
@@ -73,7 +82,7 @@ function Cursor(props: {
     if (sound.state() === "unloaded") {
       return;
     }
-    const pos = sound.seek();
+    const pos = sound.seek(item?.soundId);
     setCursorPos(pos);
   })
 
@@ -135,12 +144,14 @@ export function Tier(props: {
               top: 0;
               bottom: 0;                    
     
+              .times, .label {
+                white-space: nowrap;
+                text-overflow: clip;
+                overflow: hidden;
+                text-align: center;
+              }
               .times {
-                  font-size: 8px;
-                  white-space: nowrap;
-                  text-overflow: clip;
-                  overflow: hidden;
-                  text-align: center;
+                font-size: 8px;
               }
           `}
           onMouseDown={(e) => {
@@ -152,8 +163,7 @@ export function Tier(props: {
             e.stopPropagation();
           }}
         >
-          {label}
-
+          <div className="label" style={{width: `${width}px`}}>{label}</div>
           <div className="times" style={{width: `${width}px`}}>{from} - {to}</div>
         </div>
       })
