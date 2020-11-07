@@ -1,5 +1,5 @@
 import useSound from 'use-sound';
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import { css } from 'emotion'
 import 'howler';
 import {verifyPermission} from "../utils/verifyPermission";
@@ -8,7 +8,8 @@ import GeoPattern from 'geopattern';
 
 
 export type ItemContextType = {
-  play: (from: number, to?: number) => void
+  play: (from: number, to?: number) => void,
+  sound: any
 };
 const ItemContext = React.createContext<ItemContextType|null>(null);
 
@@ -92,6 +93,9 @@ export function useResolveAudio(audio: File|FileSystemFileHandle|undefined|null)
 }
 
 
+/**
+ * An item is the parent element, rendering a <TextGrid> component with audio-playing logic.
+ */
 export function Item(props: {
   item: ItemSet
 }) {
@@ -130,12 +134,14 @@ export function Item(props: {
     format: ['mp3'],
   });
 
+  const soundId = useRef<any>();
   const play = (from: number, to?: number) => {
     // https://github.com/goldfire/howler.js/issues/535
     to = to ?? 99;
     sound._sprite.clickedSprite = [from * 1000, (to-from) * 1000];
     //playInternal();
-    sound.play("clickedSprite");
+    if (soundId.current) { sound.pause(soundId.current) }
+    soundId.current = sound.play("clickedSprite");
   }
 
   return <div
@@ -148,7 +154,7 @@ export function Item(props: {
         }
     `}>
     <strong>{props.item.name}</strong>
-    <ItemContext.Provider value={{play}}>
+    <ItemContext.Provider value={{play, sound}}>
       {buffers ? buffers.map((buffer: any, idx: number) => {
         const pattern = props.item.patternSeeds? GeoPattern.generate(props.item.patternSeeds?.[idx]) : null;
         return <TextGrid
