@@ -4,7 +4,6 @@ import { css } from 'emotion'
 import 'howler';
 import {verifyPermission} from "../utils/verifyPermission";
 import { TextGrid } from './TextGrid';
-import GeoPattern from 'geopattern';
 import {useRaf} from "../utils/useRaf";
 
 
@@ -27,7 +26,7 @@ export class ItemSet {
   name: string = "";
   audio?: File|FileSystemFileHandle|string|null = null;
   grids: (File|FileSystemFileHandle|string)[] = [];
-  patternSeeds?: string[];
+  colors?: string[];
 
   constructor(name: string) {
     this.name = name;
@@ -270,7 +269,6 @@ function ScrollableCanvas(props: {
     `}
   >
     {props.buffers ? props.buffers.map((buffer: any, idx: number) => {
-      const pattern = props.item.patternSeeds? GeoPattern.generate(props.item.patternSeeds?.[idx]) : null;
       return (
         <div>
           <div
@@ -280,7 +278,7 @@ function ScrollableCanvas(props: {
               width: 40px;
               height: 80px;
             `}
-            style={{backgroundImage: pattern?.toDataUrl()}}
+            style={{backgroundColor: props.item.colors?.[idx]}}
           />
 
           <TextGrid

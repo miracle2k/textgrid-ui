@@ -154,6 +154,7 @@ export type Diff = {
 
 export type RunInfo = {
   type: 'train'|'align',
+  model?: string,
   corpora: { name: string, subset?: string, speaker?: boolean }[] ,
   description: string
 }

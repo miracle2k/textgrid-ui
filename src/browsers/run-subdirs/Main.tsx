@@ -3,7 +3,7 @@ import {Tabs, TabList, TabPanels, Tab, TabPanel, Button} from "@chakra-ui/core";
 import {css} from "emotion";
 import {ProjectIndex, Project} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
-import { ProjectFiles } from "./ProjectFiles";
+import { FileBrowser } from "./FileBrowser";
 import {ItemSet, Item} from "../../components/Item";
 import Split from "react-split";
 
@@ -66,7 +66,7 @@ export function MainRunSubdirs() {
                     }
                   }}
                   gutterStyle={() => {
-                    return { 'width': '1px', borderLeft: '2px dotted #dadaff'}
+                    return { 'width': '1px', borderLeft: '3px dotted #dadaff'}
                   }}
               >
                 <div style={{position: 'relative'}}>
@@ -85,7 +85,7 @@ export function MainRunSubdirs() {
                   </div>
                 </div>
                 <div style={{display: 'flex', flexDirection: 'row', overflow: 'hidden'}}>
-                  {selectedProject ? <ProjectFiles project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
+                  {selectedProject ? <FileBrowser project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
                 </div>
               </Split>
             </div>
@@ -116,8 +116,8 @@ export function Dashboard(props: {
       Projects <Button onClick={handleAdd} size={"sm"}>Add</Button>
     </h3>
 
-    {Array.from(props.index.projects.values()).map(project => {
-      return <ProjectRow index={props.index} project={project} onSelect={() => { props.onProjectSelect(project) }} />
+    {Array.from(props.index.projects.values()).map((project, idx) => {
+      return <ProjectRow key={idx} index={props.index} project={project} onSelect={() => { props.onProjectSelect(project) }} />
     })}
   </div>
 }

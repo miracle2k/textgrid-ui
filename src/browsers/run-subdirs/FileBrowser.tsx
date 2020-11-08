@@ -5,12 +5,15 @@ import {OpenTextGridItem} from "./Main";
 import {AutoSizer, List} from "react-virtualized";
 import { Checkbox, Heading, TabList, Tabs, Tab, TabPanels, TabPanel } from "@chakra-ui/core";
 import {ItemSet} from "../../components/Item";
-import GeoPattern from "geopattern";
+import randomcolor from "randomcolor";
 import {css} from "emotion";
 import Split from 'react-split'
 
 
-export function ProjectFiles(props: {
+/**
+ * The right-hand side file browser showing "runs" and it's textgrids.
+ */
+export function FileBrowser(props: {
   project: Project,
   openTextgridItem: (item: ItemSet) => void;
 }) {
@@ -60,7 +63,7 @@ export function ProjectFiles(props: {
     const item: ItemSet = new ItemSet(fileId);
     const audioFile = props.project.audioFiles[groupId][fileId];
     item.grids = selectedGridFiles.map(x => x.file);
-    item.patternSeeds = selectedGridFiles.map(x => x.run.id)
+    item.colors = selectedGridFiles.map(x => randomcolor({seed: x.run.id}));
     item.audio = audioFile;
 
     props.openTextgridItem(item);
@@ -87,7 +90,7 @@ export function ProjectFiles(props: {
           }
         }}
         gutterStyle={() => {
-          return { 'height': '1px', borderTop: '2px dotted #dadaff'}
+          return { 'height': '1px', borderTop: '3px dotted #dadaff'}
         }}
     >
       <Tabs style={{display: 'flex', flexDirection: 'column', flex: 1}}>
@@ -96,16 +99,20 @@ export function ProjectFiles(props: {
           <Tab>Corpora</Tab>
         </TabList>
         <TabPanels style={{display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto'}}>
-          <TabPanel  className={css`
+          <TabPanel className={css`
             :not([hidden]) {
               display: flex;
               flex-direction: column;
               flex: 1;              
             }
+            
+            padding: 10px;
           `}>
             <RunsList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} />
           </TabPanel>
-          <TabPanel>
+          <TabPanel className={css`
+            padding: 10px;
+          `}>
             <CorporaList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} />
           </TabPanel>
         </TabPanels>
@@ -140,7 +147,9 @@ export function CorporaList(props: {
     }
   }
 
-  return <div>
+  return <div className={css`
+    font-size: 14px;
+  `}>
     {
       Object.entries(result).map(([corpid, runs]) => {
         return <div key={corpid}>
@@ -160,7 +169,7 @@ export function CorporaList(props: {
                   />
                 </div>
 
-                <div style={{width: '90px'}}>
+                <div style={{width: '90px', paddingLeft: '5px'}}>
                   <a href="" onClick={(e) => props.handleBrowse(e, run)}>
                     {run.id}
                   </a>
@@ -172,7 +181,10 @@ export function CorporaList(props: {
                   alignItems: 'center',
                   flex: 1
                 }}>
-                  <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundSize: '120%', backgroundImage: GeoPattern.generate(run.id).toDataUrl()}} />
+                  <div style={{
+                    display: 'inline-block', marginRight: '5px', width: '30px', height: '30px',
+                    backgroundColor: randomcolor({seed: run.id})
+                  }} />
                   <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
                     {run.info?.type}
                   </div>
@@ -188,6 +200,9 @@ export function CorporaList(props: {
                 }}>
                   {run.diff ? <>
                     {run.diff.groups?.[corpid]?.stats.average.map((value: any) => {
+                      if (value === null || value === undefined) {
+                        return null;
+                      }
                       return <div style={{width: 60}}>{value}%</div>
                     })}
                   </> : null}
@@ -203,7 +218,7 @@ export function CorporaList(props: {
 
 
 function getRunDesc(run: Run) {
-  return (run.info?.corpora ?? []).map(x => {
+  let text = (run.info?.corpora ?? []).map(x => {
     let parts = [];
     if (x.subset) {
       parts.push(x.subset);
@@ -212,10 +227,12 @@ function getRunDesc(run: Run) {
       parts.push('speaker');
     }
     if (parts.length) {
-      return `${x.name} [${parts}]`;
+      return `${x.name}[${parts}]`;
     }
     return x.name;
   }).join(", ");
+
+  return text;
 }
 
 export function RunsList(props: {
@@ -226,16 +243,21 @@ export function RunsList(props: {
 }) {
   const {runs, selectedRuns, toggleChecked, handleBrowse} = props;
 
-  return <table>
+  return <table className={css`
+    font-size: 14px;
+    th {
+      text-align: left;
+    }
+  `}>
     <thead>
     <tr>
       <th></th>
       <th>ID</th>
       <th>Description</th>
-      <th>15ms</th>
-      <th>50ms</th>
-      <th>100ms</th>
-      <th>500ms</th>
+      <th>15<small>ms</small></th>
+      <th>50<small>ms</small></th>
+      <th>100<small>ms</small></th>
+      <th>500<small>ms</small></th>
     </tr>
     </thead>
     <tbody>
@@ -259,9 +281,9 @@ export function RunsList(props: {
             flexDirection: 'row',
             alignItems: 'center'
           }}>
-            <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundSize: '120%', backgroundImage: GeoPattern.generate(run.id).toDataUrl()}} />
-            <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
-              {run.info?.type}
+            <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundColor: randomcolor({seed: run.id})}} />
+            <div style={{padding: '4px', margin: '4px', fontSize: 14, backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
+              {run.info?.type === 'train' ? 'train' : run.info?.model!}
             </div>
             <div>
               {getRunDesc(run)}
