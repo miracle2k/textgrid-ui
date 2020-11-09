@@ -4,6 +4,7 @@ import {IDBPDatabase} from "idb/build/esm/entry";
 import {verifyPermission} from "../../utils/verifyPermission";
 import {readFile} from "../../components/Item";
 import YAML from 'yaml'
+import {Mark, Marks} from "../../components/TierMarkers";
 
 
 type ProjectRecord = {
@@ -12,6 +13,20 @@ type ProjectRecord = {
   gridsFolder: FileSystemDirectoryHandle
 }
 
+/**
+ * A project is two directories:
+ *
+ * - An audio folder, containing subfolders, each representing on corpus, each containing the audio files for that corpus.
+ *
+ *   `/audio/corpus1/foo.wav`
+ *
+ * - A grid folder, containing subfolders, each representing an alignment (or training run), each containing subfolders,
+ *   each of which represents a corpus and the textgrid files for this corpus and run:
+ *
+ *   `/grids/run01/corpus1/foo.TextGrid`
+ *
+ *   The grids directory also has: /grids/INFO, /grids/diff.json, and we can write /grids/marks.json
+ */
 export class Project extends EventEmitter {
   private db: IDBPDatabase<any>;
   public record: ProjectRecord;
@@ -133,6 +148,23 @@ export class Project extends EventEmitter {
   getRuns(): Run[] {
     return Object.values(this.runs);
   }
+
+  /**
+   * The marks are notes that we make on the text grid entries, such as marking entries as having errors.
+   *
+   * Written to:
+   *
+   *  /grids/marks/corpus/file.json
+   */
+  async writeMarksFile(runId: string, groupId: string, fileId: string, marks: Marks) {
+    const marksDir = await this.runs[runId].directory.getDirectoryHandle('marks', {create: true});
+    const corpusDir = await marksDir.getDirectoryHandle(groupId, {create: true});
+    const marksFile = await corpusDir.getFileHandle(fileId + '.json', {create: true});
+
+    const writable = await marksFile.createWritable();
+    await writable.write(JSON.stringify(marks));
+    await writable.close();
+  }
 }
 
 
@@ -159,8 +191,13 @@ export type RunInfo = {
   description: string
 }
 
+/**
+ * A single alignment (or training) run, which produced a set of TextGrid files.
+ */
 export class Run extends EventEmitter {
+  // The root directory of this run
   directory: FileSystemDirectoryHandle
+
   public id: string;
   public grids?: {[group: string]: { [name: string]: FileSystemFileHandle }}
   public readonly info: RunInfo;
@@ -178,7 +215,7 @@ export class Run extends EventEmitter {
   }
 
   // Load all grid files in this directory
-  async loadGrids() {
+  async ensureGridsLoaded() {
     if (this.grids) { return; } // already loaded
     await verifyPermission(this.directory);
     let gridsDir: any;
@@ -190,6 +227,20 @@ export class Run extends EventEmitter {
     }
     this.grids = await Project.indexGroupOfFiles(gridsDir);
     this.emit("update");
+  }
+
+  // Load a mark json file from this run directory.
+  async loadMarks(groupId: string, fileId: string): Promise<Mark[]|null> {
+    await verifyPermission(this.directory);
+    try {
+      const marksDir = await this.directory.getDirectoryHandle("marks");
+      const corpusDir = await marksDir.getDirectoryHandle(groupId);
+      const markFile = await corpusDir.getFileHandle(fileId + '.json')
+      const fileObj = await markFile.getFile();
+      return JSON.parse(await fileObj.text());
+    } catch (e) {
+      return null;
+    }
   }
 }
 

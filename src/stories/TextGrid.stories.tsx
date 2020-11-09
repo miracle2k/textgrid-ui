@@ -11,7 +11,11 @@ export default {
 
 const Template: Story<any> = (args) => {
   return <div style={{backgroundColor: '#FAFAFA'}}>
-    <TextGrid buffer={buffer} pixelsPerSecond={500} />
+    <TextGrid
+      buffer={buffer}
+      pixelsPerSecond={500}
+      itemIndex={0}
+    />
   </div>
 };
 
@@ -21,6 +25,7 @@ export const PlayableItem: Story<any> = (args) => {
   const item = new ItemSet("foo.mp3");
   item.grids = [buffer, buffer];
   item.audio = 'https://file-examples-com.github.io/uploads/2017/11/file_example_MP3_700KB.mp3';
+  item.colors = ['blue', 'yellow']
   return <div style={{backgroundColor: '#FAFAFA'}}>
     <Item item={item} />
   </div>

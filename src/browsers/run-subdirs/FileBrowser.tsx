@@ -1,21 +1,22 @@
 import React, {useEffect, useState} from "react";
 import {Project, Run} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
-import {OpenTextGridItem} from "./Main";
 import {AutoSizer, List} from "react-virtualized";
-import { Checkbox, Heading, TabList, Tabs, Tab, TabPanels, TabPanel } from "@chakra-ui/core";
+import { Checkbox, TabList, Tabs, Tab, TabPanels, TabPanel } from "@chakra-ui/core";
 import {ItemSet} from "../../components/Item";
 import randomcolor from "randomcolor";
 import {css} from "emotion";
 import Split from 'react-split'
 
 
+export type OpenTextGridItem = (groupId: string, fileId: string, item: FileSystemFileHandle) => void;
+
 /**
  * The right-hand side file browser showing "runs" and it's textgrids.
  */
 export function FileBrowser(props: {
   project: Project,
-  openTextgridItem: (item: ItemSet) => void;
+  openTextgridItem: (item: ItemSet, runs: Run[]) => void;
 }) {
   useUpdateOnEvent(props.project, 'update');
 
@@ -28,7 +29,7 @@ export function FileBrowser(props: {
 
   useEffect(() => {
     if (!currentRun) { return; }
-    currentRun.loadGrids();
+    currentRun.ensureGridsLoaded();
   }, [currentRun])
 
   const handleBrowse = (e: any, run: Run) => {
@@ -52,21 +53,37 @@ export function FileBrowser(props: {
     })
   }
 
+  /**
+   * When the user clicks a file to open it - we want to open the chosen one, plus any files with the matching
+   * name in other runs which have been checked.
+   */
   const handleOpenTextGridItem: OpenTextGridItem = async (groupId, fileId, textgrid) => {
     const runsToOpen = Array.from(new Set([...selectedRuns, currentRun!]));
 
     const selectedGridFiles = (await Promise.all(runsToOpen.map(async run => {
-      await run.loadGrids();
+      await run.ensureGridsLoaded();
       return {run, file: run.grids?.[groupId]?.[fileId]!};
     }))).filter(x => !!x.file);
 
+    const initialMarks = (await Promise.all(runsToOpen.map(async run => {
+      return await run.loadMarks(groupId, fileId);
+    })));
+
+    console.log(initialMarks)
+
+    // Create an "ItemSet" object which represents multiple TextGrid files + audio.
     const item: ItemSet = new ItemSet(fileId);
     const audioFile = props.project.audioFiles[groupId][fileId];
     item.grids = selectedGridFiles.map(x => x.file);
     item.colors = selectedGridFiles.map(x => randomcolor({seed: x.run.id}));
     item.audio = audioFile;
+    item.metadata = {
+      groupId,
+      fileId,
+      initialMarks
+    }
 
-    props.openTextgridItem(item);
+    props.openTextgridItem(item, runsToOpen);
   }
 
   const runs = props.project.getRuns();
@@ -134,7 +151,7 @@ export function CorporaList(props: {
   selectedRuns: Run[],
   toggleChecked: any,
 }) {
-  const {runs, selectedRuns, toggleChecked, handleBrowse} = props;
+  const {selectedRuns, toggleChecked} = props;
 
   // group by corpora
   const result: { [key: string]: Run[] } = {};
@@ -186,7 +203,7 @@ export function CorporaList(props: {
                     backgroundColor: randomcolor({seed: run.id})
                   }} />
                   <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
-                    {run.info?.type}
+                    {run.info?.type === 'train' ? 'train' : run.info?.model!}
                   </div>
                   <div>
                     {getRunDesc(run)}
@@ -199,11 +216,11 @@ export function CorporaList(props: {
                   alignItems: 'center'
                 }}>
                   {run.diff ? <>
-                    {run.diff.groups?.[corpid]?.stats.average.map((value: any) => {
+                    {run.diff.groups?.[corpid]?.stats.average.map((value: any, idx: number) => {
                       if (value === null || value === undefined) {
                         return null;
                       }
-                      return <div style={{width: 60}}>{value}%</div>
+                      return <div style={{width: 60}} key={idx}>{value}%</div>
                     })}
                   </> : null}
                 </div>
@@ -292,8 +309,8 @@ export function RunsList(props: {
         </td>
 
         {run.diff ? <>
-          {run.diff.stats.average.map((value: any) => {
-            return <td>{value}%</td>
+          {run.diff.stats.average.map((value: any, idx: number) => {
+            return <td key={idx}>{value}%</td>
           })}
         </> : null}
       </tr>
@@ -323,35 +340,34 @@ export function RunComponent(props: {
 
   return <AutoSizer>
     {({ height, width }: any) => (
-        <List
-            height={height}
-            rowHeight={24}
-            rowRenderer={({ index, key, style }: any) => {
-              const {fileId, file, groupId} = items[index];
+      <List
+        height={height}
+        rowHeight={24}
+        rowRenderer={({ index, key, style }: any) => {
+          const {fileId, file, groupId} = items[index];
 
-              return <div key={key} style={{...style, display: 'flex', flexDirection: 'row'}} className={css`
-                border-bottom: 1px solid #eeeeee;
-                &:hover {
-                  background-color: #EEEEEE;
-                }
-              `}>
-                <div style={{flex: 1}} className={css`
-                  text-overflow: ellipsis;
-                  overflow: hidden;
-                `}>
-                  <a href={""} onClick={e => {
-                    e.preventDefault();
-                    props.openTextgridItem(groupId, fileId, file);
-                  }}>{file.name}</a>
-                </div>
+          return <div key={key} style={{...style, display: 'flex', flexDirection: 'row'}} className={css`
+            border-bottom: 1px solid #eeeeee;
+            &:hover {
+              background-color: #EEEEEE;
+            }
+          `}>
+            <div style={{flex: 1}} className={css`
+              text-overflow: ellipsis;
+              overflow: hidden;
+            `}>
+              <a href={""} onClick={e => {
+                e.preventDefault();
+                props.openTextgridItem(groupId, fileId, file);
+              }}>{file.name}</a>
+            </div>
 
-                <DiffCells run={props.run} groupId={groupId} fileId={fileId} />
-
-              </div>
-            }}
-            width={width}
-            rowCount={items.length}
-        />
+            <DiffCells run={props.run} groupId={groupId} fileId={fileId} />
+          </div>
+        }}
+        width={width}
+        rowCount={items.length}
+      />
     )}
   </AutoSizer>
 }
@@ -363,7 +379,7 @@ function DiffCells(props: {
   fileId: string
 }) {
   const {groupId, fileId} = props;
-  return (props.run.diff?.files[`${groupId}/${fileId}.TextGrid`] ?? ['-', '-', '-', '-']).map((value: any) => {
+  return (props.run.diff?.files[`${groupId}/${fileId}.TextGrid`] ?? ['-', '-', '-', '-']).map((value: any, idx: number) => {
     let content;
     if (value === '-') {
       content = "?";
@@ -374,6 +390,6 @@ function DiffCells(props: {
     else {
       content = `${(value * 100).toFixed(1)}%`;
     }
-    return <div style={{width: '70px'}}>{content}</div>
+    return <div key={idx} style={{width: '70px'}}>{content}</div>
   })
 }

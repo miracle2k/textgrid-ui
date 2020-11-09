@@ -5,6 +5,9 @@ import 'howler';
 import {verifyPermission} from "../utils/verifyPermission";
 import { TextGrid } from './TextGrid';
 import {useRaf} from "../utils/useRaf";
+import {Mark, Marks, TierMarkerState} from "./TierMarkers";
+import produce from "immer"
+import {useInterval} from "../utils/useInterval";
 
 
 export type ItemContextType = {
@@ -17,6 +20,7 @@ export type ItemContextType = {
 };
 const ItemContext = React.createContext<ItemContextType|null>(null);
 
+
 export function useItem() {
   return React.useContext(ItemContext);
 }
@@ -27,6 +31,8 @@ export class ItemSet {
   audio?: File|FileSystemFileHandle|string|null = null;
   grids: (File|FileSystemFileHandle|string)[] = [];
   colors?: string[];
+
+  metadata?: unknown;
 
   constructor(name: string) {
     this.name = name;
@@ -108,14 +114,13 @@ export function useResolveAudio(audio: File|FileSystemFileHandle|string|undefine
  * An item is the parent element, rendering a <TextGrid> component with audio-playing logic.
  */
 export function Item(props: {
-  item: ItemSet
+  item: ItemSet,
+  onMarksChanged?: (item: ItemSet, fileIdx: number, marks: Marks) => void
 }) {
   const [buffers, setBuffers] = useState<(ArrayBuffer|string)[]>();
   useEffect(() => {
     (async () => {
       if (!props.item.grids.length) { return; }
-      //const response = await fetch(props.item.audio);
-      //const data = await response.text();
       const buffers = await Promise.all(
           props.item.grids.map(file => readFileHighLevel(file))
       );
@@ -140,7 +145,6 @@ export function Item(props: {
       isObjectUrl = true;
     }
 
-
     // https://github.com/joshwcomeau/use-sound/issues/23
     window.setTimeout(() => {
       setAudioUrl(finalUrl);
@@ -158,17 +162,53 @@ export function Item(props: {
     format: ['mp3'],
   });
 
-  const soundId = useRef<any>();
+  const [soundId, setSoundId] = useState<number|undefined>(undefined);
+
+  const initialMarks = (props.item.metadata as any).initialMarks ?? props.item.grids.map(x =>  null);
+  const [marks, setMarks] = useState<TierMarkerState[]>(
+    initialMarks.map((data: Mark[]) => {
+      return {
+        totalError: data ? data.filter(x => x === Mark.Error).length : 0,
+        totalCorrect: data ? data.filter(x => x === Mark.Correct).length : 0,
+        marks: data ?? []
+      }
+    })
+  );
+
+  const handleToggleMarker = (fileIdx: number, entryIdx: number) => {
+    const current = marks[fileIdx].marks[entryIdx];
+    let next: Mark|undefined = undefined;
+    if (current === Mark.Error) {
+      next = Mark.Correct;
+    } else if (current === Mark.Correct) {
+      next = undefined;
+    } else {
+      next = Mark.Error;
+    }
+
+    const nextState = produce(marks, draftState => {
+      draftState[fileIdx].marks[entryIdx] = next;
+      draftState[fileIdx].totalError += (current === Mark.Error) ? -1 : 0;
+      draftState[fileIdx].totalError += (next === Mark.Error) ? 1 : 0;
+      draftState[fileIdx].totalCorrect += (current === Mark.Correct) ? -1 : 0;
+      draftState[fileIdx].totalCorrect += (next === Mark.Correct) ? 1 : 0;
+    });
+    setMarks(nextState);
+
+    props.onMarksChanged?.(props.item, fileIdx, nextState[fileIdx].marks)
+  }
 
   const play = (opts?: {from?: number, to?: number}) => {
     // https://github.com/goldfire/howler.js/issues/535
     const to = opts?.to ?? 999;
-    const from = opts?.from ?? sound.seek(soundId.current);
+    const from = opts?.from ?? sound.seek(soundId);
     sound._sprite.clickedSprite = [from * 1000, (to-from) * 1000];
 
     // A pause() should make sure we we re-use the current sound id.
-    if (soundId.current) { sound.stop(soundId.current) }
-    soundId.current = sound.play("clickedSprite");
+    if (soundId) { sound.stop(soundId) }
+    const newSoundId = sound.play("clickedSprite");
+    console.log('playing old=', soundId, 'new', newSoundId, 'sprite', sound._sprite.clickedSprite);
+    //setSoundId(newSoundId);
   }
 
   const toggle = () => {
@@ -183,7 +223,7 @@ export function Item(props: {
     play,
     toggle,
     sound,
-    soundId: soundId.current
+    soundId
   }
 
   return <div
@@ -197,14 +237,23 @@ export function Item(props: {
     <strong>{props.item.name}</strong>
 
     <ItemContext.Provider value={contextValue}>
-      <ScrollableCanvas item={props.item} buffers={buffers} />
+      <ScrollableCanvas
+        item={props.item}
+        buffers={buffers!}
+        marks={marks}
+        onShiftClick={handleToggleMarker}
+      />
     </ItemContext.Provider>
   </div>
 }
 
 function ScrollableCanvas(props: {
   item: ItemSet,
-  buffers: any
+  // A buffer for each item in the set
+  buffers: any[],
+  // A mark data struture for each item in the set
+  marks: TierMarkerState[],
+  onShiftClick?: (itemId: number, entryId: number) => void,
 }) {
   const scrollContainer = useRef<HTMLDivElement>(null);
   const [pixelsPerSecond, setPixelsPerSecond] = useState(300);
@@ -228,7 +277,7 @@ function ScrollableCanvas(props: {
   }, []);
 
   // TODO: maybe instead of raf, this should be a  more conservative interval, say 100ms
-  useRaf(() => {
+  useInterval(() => {
     if (!scrollContainer.current) {
       return;
     }
@@ -250,7 +299,7 @@ function ScrollableCanvas(props: {
         left: pos * pixelsPerSecond
       })
     }
-  })
+  }, 100)
 
   return <div
     onMouseDown={handleMouseDown}
@@ -262,7 +311,7 @@ function ScrollableCanvas(props: {
       outline: none;
       overflow: auto;
       flex: 1;
-      margin-left: 40px; // space for the handles,
+      margin-left: 50px; // space for the handles
       
       padding-bottom: 10px;
       position: relative;
@@ -270,21 +319,53 @@ function ScrollableCanvas(props: {
   >
     {props.buffers ? props.buffers.map((buffer: any, idx: number) => {
       return (
-        <div>
+        <div key={idx}>
           <div
             className={css`
               transform: translateX(-100%);
               position: fixed;
-              width: 40px;
-              height: 80px;
+              width: 50px;
             `}
-            style={{backgroundColor: props.item.colors?.[idx]}}
-          />
+          >
+            <div style={{height: '50px', backgroundColor: props.item.colors?.[idx]}} />
+            <div className={css`
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              justify-content: center;
+            `}>
+              <div className={css`
+                font-size: 10px;
+                color: back;
+                padding: 0.3em 0.5em;
+                background-color: #ffebee;
+                border: 1px solid red;
+                border-radius: 4px;
+                margin: 2px;
+              `}>
+                {props.marks[idx].totalError}
+              </div>
+              <div className={css`
+                font-size: 10px;
+                color: back;
+                padding: 0.3em 0.5em;
+                background-color: #e8f5e9;
+                border: 1px solid green;
+                border-radius: 4px;
+                margin: 2px;
+              `}>
+                {props.marks[idx].totalCorrect}
+              </div>
+            </div>
+          </div>
 
           <TextGrid
             key={idx}
+            itemIndex={idx}
             buffer={buffer}
+            marks={props.marks[idx].marks}
             pixelsPerSecond={pixelsPerSecond}
+            onShiftClick={props.onShiftClick}
           />
         </div>
       )
@@ -317,5 +398,5 @@ function Cursor(props: {
     top: 0px;
     bottom: 0px;
     background: red;
-  `} style={{left: cursorPos * pixelsPerSecond}} />;
+  `} style={{left: (cursorPos ?? 0) * pixelsPerSecond}} />;
 }

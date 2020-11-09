@@ -1,14 +1,13 @@
 import React, {useMemo, useState, useEffect} from "react";
 import {Tabs, TabList, TabPanels, Tab, TabPanel, Button} from "@chakra-ui/core";
 import {css} from "emotion";
-import {ProjectIndex, Project} from "./ProjectIndex";
+import {ProjectIndex, Project, Run} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
 import { FileBrowser } from "./FileBrowser";
 import {ItemSet, Item} from "../../components/Item";
 import Split from "react-split";
+import {Marks} from "../../components/TierMarkers";
 
-
-export type OpenTextGridItem = (groupId: string, fileId: string, item: FileSystemFileHandle) => void;
 
 export function MainRunSubdirs() {
   const projectIndex = useMemo(() => {
@@ -19,8 +18,20 @@ export function MainRunSubdirs() {
   const [selectedProject, setSelectedProject] = useState<Project|null>(null);
   const [items, setItems] = useState<ItemSet[]>([]);
 
-  const openTextGridItem = (itemSet: ItemSet) => {
+  // Also remember, for each item, which runs they came from.
+  const [runsForItem, setRunsForItem] = useState<Run[][]>([]);
+
+  const openTextGridItem = (itemSet: ItemSet, runs: Run[]) => {
     setItems(items => ([...items, itemSet]));
+    setRunsForItem(runsForItem => ([...runsForItem, runs]));
+  }
+
+  // TODO: Maybe debounce this
+  const handleMarksChanged = (item: ItemSet, fileIdx: number, marks: Marks) => {
+    const itemSetIndex = items.indexOf(item);
+    const runs = runsForItem[itemSetIndex];
+    selectedProject!.writeMarksFile(
+        runs[fileIdx].id, (item?.metadata as any)?.groupId!, (item?.metadata as any).fileId!, marks);
   }
 
   return <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -80,12 +91,13 @@ export function MainRunSubdirs() {
                     padding: 20px;
                   `}>
                     {items.map((item, idx) => {
-                      return <Item item={item} key={idx} />
+                      return <Item item={item} key={idx} onMarksChanged={handleMarksChanged}/>
                     })}
                   </div>
                 </div>
                 <div style={{display: 'flex', flexDirection: 'row', overflow: 'hidden'}}>
-                  {selectedProject ? <FileBrowser project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
+                  {selectedProject ?
+                      <FileBrowser project={selectedProject} openTextgridItem={openTextGridItem} /> : null}
                 </div>
               </Split>
             </div>
