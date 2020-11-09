@@ -2,7 +2,7 @@ import React, {useEffect, useMemo, useState} from "react";
 import {Project, Run} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
 import {AutoSizer, List} from "react-virtualized";
-import { Checkbox, TabList, Tabs, Tab, TabPanels, TabPanel } from "@chakra-ui/core";
+import {Checkbox, Tab, TabList, TabPanel, TabPanels, Tabs} from "@chakra-ui/core";
 import {ItemSet} from "../../components/Item";
 import distinctColors from 'distinct-colors'
 import {css} from "emotion";
@@ -93,12 +93,9 @@ export function FileBrowser(props: {
     props.openTextgridItem(item, runsToOpen);
   }
 
-  const runs = props.project.getRuns();
-  runs.sort((a, b) => a.id.localeCompare(b.id))
-
   return <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
     <Split
-        sizes={[25, 75]}
+        sizes={[40, 60]}
         minSize={100}
         expandToMin={false}
         gutterSize={10}
@@ -132,12 +129,12 @@ export function FileBrowser(props: {
             
             padding: 10px;
           `}>
-            <RunsList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} colors={colors} />
+            <RunsList project={props.project} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} colors={colors} />
           </TabPanel>
           <TabPanel className={css`
             padding: 10px;
           `}>
-            <CorporaList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} colors={colors}  />
+            <CorporaList project={props.project} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} colors={colors} />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -153,7 +150,7 @@ export function FileBrowser(props: {
 }
 
 export function CorporaList(props: {
-  runs: Run[],
+  project: Project,
   colors: {[key: string]: string},
   handleBrowse: any,
   selectedRuns: Run[],
@@ -161,9 +158,11 @@ export function CorporaList(props: {
 }) {
   const {selectedRuns, toggleChecked} = props;
 
+  const runs = props.project.getRuns();
+
   // group by corpora
   const result: { [key: string]: Run[] } = {};
-  for (const run of props.runs) {
+  for (const run of runs) {
     for (const corpid of run.info.corpora ?? []) {
       if (!result[corpid.name]) {
         result[corpid.name] = [];
@@ -210,12 +209,7 @@ export function CorporaList(props: {
                     display: 'inline-block', marginRight: '5px', width: '30px', height: '30px',
                     backgroundColor: props.colors[run.id]
                   }} />
-                  <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
-                    {run.info?.type === 'train' ? 'train' : run.info?.model!}
-                  </div>
-                  <div>
-                    {getRunDesc(run)}
-                  </div>
+                  <CorporaListDescription project={props.project} run={run} />
                 </div>
 
                 <div style={{
@@ -241,33 +235,17 @@ export function CorporaList(props: {
   </div>
 }
 
-
-function getRunDesc(run: Run) {
-  let text = (run.info?.corpora ?? []).map(x => {
-    let parts = [];
-    if (x.subset) {
-      parts.push(x.subset);
-    }
-    if (x.speaker) {
-      parts.push('speaker');
-    }
-    if (parts.length) {
-      return `${x.name}[${parts}]`;
-    }
-    return x.name;
-  }).join(", ");
-
-  return text;
-}
-
 export function RunsList(props: {
-  runs: Run[],
+  project: Project,
   colors: {[key: string]: string},
   selectedRuns: Run[],
   toggleChecked: any,
   handleBrowse: any
 }) {
-  const {runs, selectedRuns, toggleChecked, handleBrowse} = props;
+  const {selectedRuns, toggleChecked, handleBrowse} = props;
+
+  const runs = props.project.getRuns();
+  runs.sort((a, b) => a.id.localeCompare(b.id))
 
   return <table className={css`
     font-size: 14px;
@@ -308,12 +286,7 @@ export function RunsList(props: {
             alignItems: 'center'
           }}>
             <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundColor: props.colors[run.id]}} />
-            <div style={{padding: '4px', margin: '4px', fontSize: 14, backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
-              {run.info?.type === 'train' ? 'train' : run.info?.model!}
-            </div>
-            <div>
-              {getRunDesc(run)}
-            </div>
+            <RunsListDescription project={props.project} run={run} />
           </div>
         </td>
 
@@ -326,6 +299,82 @@ export function RunsList(props: {
     })}
     </tbody>
   </table>
+}
+
+
+function RunsListDescription(props: {
+  run: Run,
+  project: Project,
+}) {
+  const {run} = props;
+
+  let boxContent: any = "";
+  let outsideContent: any = "";
+
+  if (run.info?.type === 'train') {
+     boxContent = "train";
+     outsideContent = formatRunCorpora(run);
+  }
+  else {
+    const model = run.info?.model;
+    const runForModel = model ? props.project.getRun(model) : null;
+
+    boxContent = model;
+    outsideContent = formatRunCorpora(run);
+  }
+
+  return <>
+    <div style={{padding: '4px', margin: '4px', fontSize: 14, backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
+      {boxContent}
+    </div>
+    {outsideContent}
+  </>
+}
+
+function CorporaListDescription(props: {
+  run: Run,
+  project: Project,
+}) {
+  const {run} = props;
+
+  let boxContent: any = "";
+  let outsideContent: any = "";
+
+  if (run.info?.type === 'train') {
+    boxContent = "train";
+    outsideContent = formatRunCorpora(run);
+  }
+  else {
+    const model = run.info?.model;
+    const runForModel = model ? props.project.getRun(model) : null;
+
+    boxContent = model;
+    outsideContent = runForModel ? <div style={{fontSize: '10px'}}>{formatRunCorpora(runForModel)}</div> : null
+  }
+
+  return <>
+    <div style={{padding: '4px', margin: '4px', fontSize: 14, backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
+      {boxContent}
+    </div>
+    {outsideContent}
+  </>
+}
+
+
+function formatRunCorpora(run: Run) {
+  return (run.info?.corpora ?? []).map(x => {
+    let parts = [];
+    if (x.subset) {
+      parts.push(x.subset);
+    }
+    if (x.speaker) {
+      parts.push('speaker');
+    }
+    if (parts.length) {
+      return `${x.name}[${parts}]`;
+    }
+    return x.name;
+  }).join(", ");
 }
 
 

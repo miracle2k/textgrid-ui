@@ -61,7 +61,7 @@ export function MainRunSubdirs() {
               flex: 1;
           `}>
               <Split
-                  sizes={[80, 20]}
+                  sizes={[60, 40]}
                   minSize={100}
                   expandToMin={false}
                   gutterSize={10}

@@ -149,6 +149,10 @@ export class Project extends EventEmitter {
     return Object.values(this.runs);
   }
 
+  getRun(id: string): Run {
+    return this.runs[id];
+  }
+
   /**
    * The marks are notes that we make on the text grid entries, such as marking entries as having errors.
    *
