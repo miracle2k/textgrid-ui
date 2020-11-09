@@ -1,11 +1,12 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {Project, Run} from "./ProjectIndex";
 import {useUpdateOnEvent} from "../../utils/useEventedMemo";
 import {AutoSizer, List} from "react-virtualized";
 import { Checkbox, TabList, Tabs, Tab, TabPanels, TabPanel } from "@chakra-ui/core";
 import {ItemSet} from "../../components/Item";
-import randomcolor from "randomcolor";
+import distinctColors from 'distinct-colors'
 import {css} from "emotion";
+import {zipObject} from 'lodash';
 import Split from 'react-split'
 
 
@@ -26,6 +27,14 @@ export function FileBrowser(props: {
 
   const [currentRun, setCurrentRun] = useState<Run|null>(null);
   const [selectedRuns, setSelectedRuns] = useState<Run[]>([]);
+
+  const colors = useMemo(() => {
+    const colors = distinctColors({count: selectedRuns.length + 1}).map(c => c.hex());
+    return {
+      [currentRun?.id ?? ""]: colors[0],
+      ...zipObject(selectedRuns.map(run => run.id), colors.slice(1))
+    }
+  }, [selectedRuns, currentRun])
 
   useEffect(() => {
     if (!currentRun) { return; }
@@ -69,13 +78,11 @@ export function FileBrowser(props: {
       return await run.loadMarks(groupId, fileId);
     })));
 
-    console.log(initialMarks)
-
     // Create an "ItemSet" object which represents multiple TextGrid files + audio.
     const item: ItemSet = new ItemSet(fileId);
     const audioFile = props.project.audioFiles[groupId][fileId];
     item.grids = selectedGridFiles.map(x => x.file);
-    item.colors = selectedGridFiles.map(x => randomcolor({seed: x.run.id}));
+    item.colors = runsToOpen.map(run => colors[run.id]);
     item.audio = audioFile;
     item.metadata = {
       groupId,
@@ -125,12 +132,12 @@ export function FileBrowser(props: {
             
             padding: 10px;
           `}>
-            <RunsList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} />
+            <RunsList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} colors={colors} />
           </TabPanel>
           <TabPanel className={css`
             padding: 10px;
           `}>
-            <CorporaList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} />
+            <CorporaList runs={runs} selectedRuns={selectedRuns} toggleChecked={toggleChecked} handleBrowse={handleBrowse} colors={colors}  />
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -147,6 +154,7 @@ export function FileBrowser(props: {
 
 export function CorporaList(props: {
   runs: Run[],
+  colors: {[key: string]: string},
   handleBrowse: any,
   selectedRuns: Run[],
   toggleChecked: any,
@@ -200,7 +208,7 @@ export function CorporaList(props: {
                 }}>
                   <div style={{
                     display: 'inline-block', marginRight: '5px', width: '30px', height: '30px',
-                    backgroundColor: randomcolor({seed: run.id})
+                    backgroundColor: props.colors[run.id]
                   }} />
                   <div style={{padding: '4px', margin: '4px', backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
                     {run.info?.type === 'train' ? 'train' : run.info?.model!}
@@ -254,6 +262,7 @@ function getRunDesc(run: Run) {
 
 export function RunsList(props: {
   runs: Run[],
+  colors: {[key: string]: string},
   selectedRuns: Run[],
   toggleChecked: any,
   handleBrowse: any
@@ -268,7 +277,7 @@ export function RunsList(props: {
   `}>
     <thead>
     <tr>
-      <th></th>
+      <th />
       <th>ID</th>
       <th>Description</th>
       <th>15<small>ms</small></th>
@@ -278,7 +287,7 @@ export function RunsList(props: {
     </tr>
     </thead>
     <tbody>
-    {runs.map(run => {
+    {runs.map((run) => {
       return <tr key={run.id}>
         <td style={{verticalAlign: 'middle'}}>
           <Checkbox
@@ -288,7 +297,7 @@ export function RunsList(props: {
           />
         </td>
         <td>
-          <a href="" onClick={(e) => handleBrowse(e, run)}>
+          <a href="#" onClick={(e) => handleBrowse(e, run)}>
             {run.directory.name}
           </a>
         </td>
@@ -298,7 +307,7 @@ export function RunsList(props: {
             flexDirection: 'row',
             alignItems: 'center'
           }}>
-            <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundColor: randomcolor({seed: run.id})}} />
+            <div style={{display: 'inline-block', marginRight: '5px', width: '30px', height: '30px', backgroundColor: props.colors[run.id]}} />
             <div style={{padding: '4px', margin: '4px', fontSize: 14, backgroundColor: run.info?.type === 'align' ? '#d1d9ff' : '#d9d9d9'}}>
               {run.info?.type === 'train' ? 'train' : run.info?.model!}
             </div>
