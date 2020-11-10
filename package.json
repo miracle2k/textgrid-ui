@@ -17,7 +17,7 @@
     "immer": "^7.0.14",
     "lodash": "^4.17.20",
     "praatio": "^2.1.11",
-    "react": "^0.0.0-experimental-4ead6b530",
+    "react": "^0.14.0",
     "react-color": "^2.18.1",
     "react-dom": "^0.0.0-experimental-4ead6b530",
     "react-dropzone": "^11.0.1",
