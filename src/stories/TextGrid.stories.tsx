@@ -2,6 +2,9 @@ import React from 'react';
 import {TextGrid} from "../components/TextGrid";
 import {Meta, Story} from "@storybook/react";
 import {Item, ItemSet} from '../components/Item';
+import {LayoutManager, VirtualView} from '../components/VirtualView';
+import {parseTextgrid} from "praatio";
+import {Buffer} from "buffer";
 
 
 export default {
@@ -10,16 +13,19 @@ export default {
 } as Meta;
 
 const Template: Story<any> = (args) => {
-  return <div style={{backgroundColor: '#FAFAFA'}}>
+  return <div style={{backgroundColor: '#FAFAFA', overflow: 'auto'}}>
     <TextGrid
-      buffer={buffer}
+      grid={parseTextgrid(Buffer.from(buffer))}
       pixelsPerSecond={500}
       itemIndex={0}
+      leftPixel={0}
+      rightPixel={1000}
     />
   </div>
 };
 
 export const TextGridOnly = Template.bind({});
+
 
 export const PlayableItem: Story<any> = (args) => {
   const item = new ItemSet("foo.mp3");
@@ -30,6 +36,26 @@ export const PlayableItem: Story<any> = (args) => {
     <Item item={item} />
   </div>
 };
+
+export const View: Story<any> = (args) => {
+  const manager: LayoutManager = {
+    cellRenderers(opts: { isScrolling: boolean; width: number; x: number }): any {
+      return <TextGrid
+          grid={parseTextgrid(Buffer.from(buffer))}
+          pixelsPerSecond={1500}
+          itemIndex={0}
+          leftPixel={opts.x}
+          rightPixel={opts.x + opts.width}
+
+      />
+    },
+    getScrollPositionForCell: () => {},
+  }
+  return <div>
+    <VirtualView height={400} layoutManager={manager} width={500} virtualWidth={7900} />
+  </div>
+}
+
 
 
 const buffer = `

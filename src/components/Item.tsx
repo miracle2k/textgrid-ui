@@ -1,22 +1,24 @@
-import useSound from 'use-sound';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
-import { css } from 'emotion'
-import 'howler';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {css} from 'emotion'
 import {verifyPermission} from "../utils/verifyPermission";
-import { TextGrid } from './TextGrid';
+import {TextGrid} from './TextGrid';
 import {useRaf} from "../utils/useRaf";
 import {Mark, Marks, TierMarkerState} from "./TierMarkers";
 import produce from "immer"
 import {useInterval} from "../utils/useInterval";
+import {useAudioPlayer} from "../utils/useAudioPlayer";
+import {LayoutManager, VirtualView} from "./VirtualView";
+import {parseTextgrid} from "praatio";
+import {Buffer} from "buffer";
+import {AutoSizer} from "react-virtualized";
 
 
 export type ItemContextType = {
   play: (opts?: {from?: number, to?: number}) => void,
   toggle: () => void,
-
-  // When using the howler sound object directly, be sure to use it with "soundId" to get the one that is newest.
-  sound: any,
-  soundId?: number,
+  seek: (time: number) => void,
+  getPosition: () => number,
+  getIsPlaying: () => boolean,
 };
 const ItemContext = React.createContext<ItemContextType|null>(null);
 
@@ -128,6 +130,13 @@ export function Item(props: {
     })();
   }, [props.item.grids]);
 
+  const textgrids = useMemo(() => {
+    if (!buffers) {
+      return null;
+    }
+    return buffers.map(buffer => parseTextgrid(Buffer.from(buffer)));
+  }, [buffers]);
+
   const [audioUrl, setAudioUrl] = useState<string>("");
   const audioFile = useResolveAudio(props.item.audio);
   React.useEffect(() => {
@@ -157,12 +166,8 @@ export function Item(props: {
     }
   }, [audioFile]);
 
-  const [_, {sound}] = useSound(audioUrl, {
-    // @ts-ignore
-    format: ['mp3'],
-  });
 
-  const [soundId, setSoundId] = useState<number|undefined>(undefined);
+  const player = useAudioPlayer(audioUrl);
 
   const initialMarks = (props.item.metadata as any).initialMarks ?? props.item.grids.map(x =>  null);
   const [marks, setMarks] = useState<TierMarkerState[]>(
@@ -198,32 +203,20 @@ export function Item(props: {
     props.onMarksChanged?.(props.item, fileIdx, nextState[fileIdx].marks)
   }
 
-  const play = (opts?: {from?: number, to?: number}) => {
-    // https://github.com/goldfire/howler.js/issues/535
-    const to = opts?.to ?? 999;
-    const from = opts?.from ?? sound.seek(soundId);
-    sound._sprite.clickedSprite = [from * 1000, (to-from) * 1000];
-
-    // A pause() should make sure we we re-use the current sound id.
-    if (soundId) { sound.stop(soundId) }
-    const newSoundId = sound.play("clickedSprite");
-    console.log('playing old=', soundId, 'new', newSoundId, 'sprite', sound._sprite.clickedSprite);
-    //setSoundId(newSoundId);
-  }
-
   const toggle = () => {
-    if (sound.playing(soundId)) {
-      sound.pause();
+    if (player.getIsPlaying()) {
+      player.pause();
     } else {
-      play();
+      player.play();
     }
   }
 
   const contextValue = {
-    play,
+    play: player.play,
     toggle,
-    sound,
-    soundId
+    seek: player.seek,
+    getPosition: player.getPosition,
+    getIsPlaying: player.getIsPlaying
   }
 
   return <div
@@ -237,20 +230,21 @@ export function Item(props: {
     <strong>{props.item.name}</strong>
 
     <ItemContext.Provider value={contextValue}>
-      <ScrollableCanvas
-        item={props.item}
-        buffers={buffers!}
-        marks={marks}
-        onShiftClick={handleToggleMarker}
-      />
+      {textgrids ?
+        <ScrollableCanvas
+          item={props.item}
+          marks={marks}
+          textgrids={textgrids}
+          onShiftClick={handleToggleMarker}
+        /> : null}
     </ItemContext.Provider>
   </div>
 }
 
 function ScrollableCanvas(props: {
   item: ItemSet,
-  // A buffer for each item in the set
-  buffers: any[],
+  // The loaded text grid for each file in the set
+  textgrids: any[],
   // A mark data struture for each item in the set
   marks: TierMarkerState[],
   onShiftClick?: (itemId: number, entryId: number) => void,
@@ -258,6 +252,9 @@ function ScrollableCanvas(props: {
   const scrollContainer = useRef<HTMLDivElement>(null);
   const [pixelsPerSecond, setPixelsPerSecond] = useState(300);
   const item = useItem();
+
+  const maxTimestamp = useMemo(() => Math.max(...props.textgrids.flatMap(
+      grid => Object.values(grid.tierDict)).map((tier: any) => tier.maxTimestamp as number)), [props.textgrids]);
 
   const handleKeyPress = useCallback((e: any) => {
     if (e.key === ' ') {
@@ -268,7 +265,7 @@ function ScrollableCanvas(props: {
   const handleMouseDown = useCallback((e: any) => {
     const rect = scrollContainer.current!.getBoundingClientRect();
     const posX = e.clientX - rect.x;
-    item?.sound.seek(posX / pixelsPerSecond, item?.soundId);
+    item?.seek(posX / pixelsPerSecond);
   }, [item, pixelsPerSecond]);
 
   const handleWheel = useCallback((e: any) => {
@@ -276,24 +273,23 @@ function ScrollableCanvas(props: {
     setPixelsPerSecond(p => Math.max(20, Math.min(p + deltaY, 1000)))
   }, []);
 
-  // TODO: maybe instead of raf, this should be a  more conservative interval, say 100ms
+  const boundingClientRect = useMemo(() => {
+    return scrollContainer.current?.getBoundingClientRect() ?? null;
+  }, [scrollContainer.current])
+
   useInterval(() => {
     if (!scrollContainer.current) {
       return;
     }
-    const sound = item?.sound;
-    if (!sound) { return; }
-    if (sound.state() === "unloaded") {
+
+    if (!item?.getIsPlaying()) {
       return;
     }
-    if (!sound.playing()) {
-      return;
-    }
-    const pos = sound.seek(item?.soundId);
+    const pos = item?.getPosition() ?? 0;
 
     // Is it in the range?
-    const rect = scrollContainer.current!.getBoundingClientRect();
-    const maxTime = (scrollContainer.current.scrollLeft + rect.width) / pixelsPerSecond;
+    // Performance: accessing scrollLeft causes a "Recalculate Style" in Chrome, but this is fairly fast.
+    const maxTime = (scrollContainer.current.scrollLeft + boundingClientRect!.width) / pixelsPerSecond;
     if (pos > maxTime) {
       scrollContainer.current.scrollTo({
         left: pos * pixelsPerSecond
@@ -301,78 +297,93 @@ function ScrollableCanvas(props: {
     }
   }, 100)
 
-  return <div
-    onMouseDown={handleMouseDown}
-    onKeyPress={handleKeyPress}
-    onWheel={handleWheel}
-    ref={scrollContainer}
-    tabIndex={0}
-    className={css`
-      outline: none;
-      overflow: auto;
-      flex: 1;
-      margin-left: 50px; // space for the handles
-      
-      padding-bottom: 10px;
-      position: relative;
-    `}
-  >
-    {props.buffers ? props.buffers.map((buffer: any, idx: number) => {
-      return (
-        <div key={idx}>
-          <div
-            className={css`
-              transform: translateX(-100%);
-              position: fixed;
-              width: 50px;
-            `}
-          >
-            <div style={{height: '50px', backgroundColor: props.item.colors?.[idx]}} />
-            <div className={css`
-              display: flex;
-              flex-direction: row;
-              align-items: center;
-              justify-content: center;
-            `}>
-              <div className={css`
-                font-size: 10px;
-                color: back;
-                padding: 0.3em 0.5em;
-                background-color: #ffebee;
-                border: 1px solid red;
-                border-radius: 4px;
-                margin: 2px;
-              `}>
-                {props.marks[idx].totalError}
-              </div>
-              <div className={css`
-                font-size: 10px;
-                color: back;
-                padding: 0.3em 0.5em;
-                background-color: #e8f5e9;
-                border: 1px solid green;
-                border-radius: 4px;
-                margin: 2px;
-              `}>
-                {props.marks[idx].totalCorrect}
-              </div>
-            </div>
-          </div>
+  const manager: LayoutManager = {
+    cellRenderers(opts: { isScrolling: boolean; width: number; x: number }): any {
+      return <div>
+        {props.textgrids ? props.textgrids.map((textgrid: any, idx: number) => {
+          return (
+              <div key={idx}>
+                <div
+                  className={css`
+                    transform: translateX(-100%);
+                    position: absolute;
+                    width: 50px;
+                  `}
+                >
+                  <div style={{height: '50px', backgroundColor: props.item.colors?.[idx]}}/>
+                  <div className={css`
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: center;
+                  `}>
+                    <div className={css`
+                      font-size: 10px;
+                      color: back;
+                      padding: 0.3em 0.5em;
+                      background-color: #ffebee;
+                      border: 1px solid red;
+                      border-radius: 4px;
+                      margin: 2px;
+                    `}>
+                      {props.marks[idx].totalError}
+                    </div>
+                    <div className={css`
+                      font-size: 10px;
+                      color: back;
+                      padding: 0.3em 0.5em;
+                      background-color: #e8f5e9;
+                      border: 1px solid green;
+                      border-radius: 4px;
+                      margin: 2px;
+                    `}>
+                      {props.marks[idx].totalCorrect}
+                    </div>
+                  </div>
+                </div>
 
-          <TextGrid
-            key={idx}
-            itemIndex={idx}
-            buffer={buffer}
-            marks={props.marks[idx].marks}
-            pixelsPerSecond={pixelsPerSecond}
-            onShiftClick={props.onShiftClick}
-          />
-        </div>
-      )
-    }) : null}
+                <TextGrid
+                    key={idx}
+                    itemIndex={idx}
+                    grid={textgrid}
+                    marks={props.marks[idx].marks}
+                    pixelsPerSecond={pixelsPerSecond}
+                    onShiftClick={props.onShiftClick}
+                    leftPixel={opts.x}
+                    rightPixel={opts.x + opts.width}
+                />
+              </div>
+          )
+        }) : null}
 
-    <Cursor pixelsPerSecond={pixelsPerSecond} />
-  </div>
+        <Cursor pixelsPerSecond={pixelsPerSecond} />
+      </div>
+    },
+    getScrollPositionForCell: () => {},
+  };
+
+  return <AutoSizer disableHeight>
+    {({ width }: any) => {
+      return <VirtualView
+        onMouseDown={handleMouseDown}
+        onKeyPress={handleKeyPress}
+        onWheel={handleWheel}
+        // ref={scrollContainer}
+        tabIndex={0}
+        className={css`
+          outline: none;
+          overflow: auto;
+          flex: 1;          
+          
+          padding-bottom: 10px;
+          position: relative;
+        `}
+        layoutManager={manager}
+        virtualWidth={maxTimestamp * pixelsPerSecond}
+        width={width}
+      />
+    }}
+  </AutoSizer>
 }
 
 function Cursor(props: {
@@ -383,20 +394,19 @@ function Cursor(props: {
   const [cursorPos, setCursorPos] = useState(0);
 
   useRaf(() => {
-    const sound = item?.sound;
-    if (!sound) { return; }
-    if (sound.state() === "unloaded") {
-      return;
-    }
-    const pos = sound.seek(item?.soundId);
+    const pos = item?.getPosition() ?? 0;
     setCursorPos(pos);
   })
 
-  return <div className={css`
-    position: absolute;
-    width: 1px;
-    top: 0px;
-    bottom: 0px;
-    background: red;
-  `} style={{left: (cursorPos ?? 0) * pixelsPerSecond}} />;
+  return <div
+    className={css`
+      position: absolute;
+      width: 1px;
+      top: 0px;
+      bottom: 0px;
+      background: red;
+    `}
+    // Performance: Be sure to use translate, not `left`. The latter requires a long "Paint" cycle
+    // in Chrome (if there are many elements).
+    style={{transform: `translateX(${(cursorPos ?? 0) * pixelsPerSecond}px)`}} />;
 }

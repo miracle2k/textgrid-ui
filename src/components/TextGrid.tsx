@@ -1,42 +1,31 @@
-import React, {useMemo} from "react";
-import {
-  parseTextgrid,
-} from 'praatio';
+import React from "react";
 import { css } from 'emotion'
-import {Buffer} from 'buffer';
 import { useItem } from "./Item";
 import {Mark, Marks} from "./TierMarkers";
 
 
 export function TextGrid(props: {
   itemIndex: number,
-  buffer: string|Buffer,
+  grid: any,
   marks?: Marks,
   pixelsPerSecond: number,
   onShiftClick?: (itemId: number, entryId: number) => void,
+  leftPixel: number,
+  rightPixel: number
 }) {
-  const tg = useMemo(() => {
-    if (!props.buffer) {
-      return null;
-    }
-    return parseTextgrid(Buffer.from(props.buffer));
-  }, [props.buffer]);
-
-  if (!tg) {
-    return <React.Fragment>(no text grid)</React.Fragment>;
-  }
-
   return <div className={css`
     margin-bottom: 15px;
   `}>
-    {tg.tierNameList.map((name: string, idx: number) => {
+    {props.grid.tierNameList.map((name: string, idx: number) => {
       return <Tier
         itemIndex={props.itemIndex}
-        tier={tg.tierDict[name]}
+        tier={props.grid.tierDict[name]}
         key={idx}
         pixelsPerSecond={props.pixelsPerSecond}
         marks={name === 'phones' ? props.marks : undefined}
         onShiftClick={props.onShiftClick}
+        leftPixel={props.leftPixel}
+        rightPixel={props.rightPixel}
       />
     })}
   </div>
@@ -48,6 +37,8 @@ export function Tier(props: {
   pixelsPerSecond: number,
   onShiftClick?: (itemId: number, entryId: number) => void,
   marks?: Marks,
+  leftPixel: number,
+  rightPixel: number
 }) {
   const item = useItem();
   const {tier, pixelsPerSecond} = props;
@@ -68,6 +59,13 @@ export function Tier(props: {
 
         const left = from * pixelsPerSecond;
         const width = (to - from) * pixelsPerSecond;
+
+        if (left + width < props.leftPixel) {
+          return null;
+        }
+        if (left > props.rightPixel) {
+          return null;
+        }
 
         return <div
           key={idx}
