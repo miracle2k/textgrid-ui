@@ -41,6 +41,8 @@ export interface Props extends React.BaseHTMLAttributes<HTMLDivElement> {
    */
   layoutManager: LayoutManager,
 
+  innerRef?: any,
+
   /**
    * Optional custom CSS class name to attach to root Collection element.
    */
@@ -112,10 +114,7 @@ export interface Props extends React.BaseHTMLAttributes<HTMLDivElement> {
 export class VirtualView extends React.PureComponent<Props> {
 
   static defaultProps = {
-    'aria-label': 'grid',
     horizontalOverscanSize: 0,
-    noContentRenderer: () => null,
-    onScroll: () => null,
     scrollToAlignment: 'auto',
     scrollToCell: -1,
     style: {},
@@ -248,7 +247,10 @@ export class VirtualView extends React.PureComponent<Props> {
       id,
       style,
       width,
-      virtualWidth
+      virtualWidth,
+      scrollToAlignment,
+      scrollToCell,
+      ...rest
     } = this.props;
 
     const {isScrolling, scrollLeft} = this.state;
@@ -302,17 +304,19 @@ export class VirtualView extends React.PureComponent<Props> {
 
     return (
         <div
-            ref={this._setScrollingContainerRef}
-            aria-label={this.props['aria-label']}
-            className={className}
-            id={id}
-            onScroll={this._onScroll}
-            role="grid"
-            style={{
-              ...collectionStyle,
-              ...style,
-            }}
-            tabIndex={0}>
+          ref={this._setScrollingContainerRef}
+          aria-label={this.props['aria-label']}
+          className={className}
+          id={id}
+          onScroll={this._onScroll}
+          role="grid"
+          style={{
+            ...collectionStyle,
+            ...style,
+          }}
+          tabIndex={0}
+          {...rest}
+        >
           <div
               style={{
                 // height: totalHeight,
@@ -356,6 +360,7 @@ export class VirtualView extends React.PureComponent<Props> {
   _scrollingContainer: any;
   _setScrollingContainerRef = (ref: any) => {
     this._scrollingContainer = ref;
+    this.props.innerRef.current = ref;
   };
 
   _setScrollPosition({scrollLeft}: {scrollLeft: number}) {

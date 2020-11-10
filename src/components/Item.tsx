@@ -273,9 +273,10 @@ function ScrollableCanvas(props: {
     setPixelsPerSecond(p => Math.max(20, Math.min(p + deltaY, 1000)))
   }, []);
 
-  const boundingClientRect = useMemo(() => {
-    return scrollContainer.current?.getBoundingClientRect() ?? null;
-  }, [scrollContainer.current])
+  // Maybe we can cache this (and udpate on resize!)
+  // const boundingClientRect = useMemo(() => {
+  //   return scrollContainer.current?.getBoundingClientRect() ?? null;
+  // }, [scrollContainer.current])
 
   useInterval(() => {
     if (!scrollContainer.current) {
@@ -287,6 +288,9 @@ function ScrollableCanvas(props: {
     }
     const pos = item?.getPosition() ?? 0;
 
+    // Maybe we can cache this?
+    const boundingClientRect = scrollContainer.current?.getBoundingClientRect();
+    
     // Is it in the range?
     // Performance: accessing scrollLeft causes a "Recalculate Style" in Chrome, but this is fairly fast.
     const maxTime = (scrollContainer.current.scrollLeft + boundingClientRect!.width) / pixelsPerSecond;
@@ -368,7 +372,7 @@ function ScrollableCanvas(props: {
         onMouseDown={handleMouseDown}
         onKeyPress={handleKeyPress}
         onWheel={handleWheel}
-        // ref={scrollContainer}
+        innerRef={scrollContainer}
         tabIndex={0}
         className={css`
           outline: none;

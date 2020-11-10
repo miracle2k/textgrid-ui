@@ -1,7 +1,9 @@
-import React from "react";
+import React, {useState} from "react";
 import { css } from 'emotion'
 import { useItem } from "./Item";
 import {Mark, Marks} from "./TierMarkers";
+import {useRaf} from "../utils/useRaf";
+import { isEqual } from "lodash";
 
 
 export function TextGrid(props: {
@@ -42,7 +44,42 @@ export function Tier(props: {
 }) {
   const item = useItem();
   const {tier, pixelsPerSecond} = props;
-  const maxValue = tier.maxTimestamp;
+  const [highlighted, setHighlighted] = useState<boolean[]>([]);
+
+  const visibleEntries = tier.entryList.filter((entry: [number, number, string], idx: number) => {
+    const from = entry[0];
+    const to = entry[1];
+
+    const left = from * pixelsPerSecond;
+    const width = (to - from) * pixelsPerSecond;
+
+    if (left + width < props.leftPixel) {
+      return false;
+    }
+    if (left > props.rightPixel) {
+      return false;
+    }
+
+    return true;
+  });
+
+  useRaf(() => {
+    const pos = item?.getPosition() ?? 0;
+
+    const current = visibleEntries.map((entry: [number, number, string], idx: number) => {
+      const from = entry[0];
+      const to = entry[1];
+
+      if (pos >= from && pos <= to) {
+        return true;
+      }
+      return false;
+    });
+    if (isEqual(current, highlighted)) {
+      return;
+    }
+    setHighlighted(current);
+  })
 
   return <div className={css`
     padding: 10px;
@@ -52,7 +89,7 @@ export function Tier(props: {
     height: 35px;    
   `}>
     {
-      tier.entryList.map((entry: [number, number, string], idx: number) => {
+      visibleEntries.map((entry: [number, number, string], idx: number) => {
         const from = entry[0];
         const to = entry[1];
         const label = entry[2];
@@ -60,12 +97,7 @@ export function Tier(props: {
         const left = from * pixelsPerSecond;
         const width = (to - from) * pixelsPerSecond;
 
-        if (left + width < props.leftPixel) {
-          return null;
-        }
-        if (left > props.rightPixel) {
-          return null;
-        }
+        const doHighlight = highlighted[idx];
 
         return <div
           key={idx}
@@ -97,6 +129,7 @@ export function Tier(props: {
           style={{
             left: `${left}px`,
             width: `${width}px`,
+            color: doHighlight ? 'red' : 'inherit',
             backgroundColor: props.marks?.[idx] === Mark.Correct ? "#e8f5e9" : props.marks?.[idx] === Mark.Error ? "#ffebee" : ""
           }}
           onMouseDown={(e) => {
