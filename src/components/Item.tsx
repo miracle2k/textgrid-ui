@@ -287,46 +287,7 @@ function ScrollableCanvas(props: {
       return <div>
         {props.textgrids ? props.textgrids.map((textgrid: any, idx: number) => {
           return (
-              <div key={idx}>
-                <div
-                  className={css`
-                    transform: translateX(-100%);
-                    position: absolute;
-                    width: 50px;
-                  `}
-                >
-                  <div style={{height: '50px', backgroundColor: props.item.colors?.[idx]}}/>
-                  <div className={css`
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    justify-content: center;
-                  `}>
-                    <div className={css`
-                      font-size: 10px;
-                      color: back;
-                      padding: 0.3em 0.5em;
-                      background-color: #ffebee;
-                      border: 1px solid red;
-                      border-radius: 4px;
-                      margin: 2px;
-                    `}>
-                      {props.marks[idx].totalError}
-                    </div>
-                    <div className={css`
-                      font-size: 10px;
-                      color: back;
-                      padding: 0.3em 0.5em;
-                      background-color: #e8f5e9;
-                      border: 1px solid green;
-                      border-radius: 4px;
-                      margin: 2px;
-                    `}>
-                      {props.marks[idx].totalCorrect}
-                    </div>
-                  </div>
-                </div>
-
+              <div key={idx} style={{height: '130px'}}>
                 <TextGrid
                     key={idx}
                     itemIndex={idx}
@@ -347,28 +308,67 @@ function ScrollableCanvas(props: {
     getScrollPositionForCell: () => {},
   };
 
-  return <AutoSizer disableHeight>
-    {({ width }: any) => {
-      return <VirtualView
-        onMouseDown={handleMouseDown}
-        onKeyPress={handleKeyPress}
-        onWheel={handleWheel}
-        innerRef={scrollContainer}
-        tabIndex={0}
-        className={css`
-          outline: none;
-          overflow: auto;
-          flex: 1;          
-          
-          padding-bottom: 10px;
-          position: relative;
-        `}
-        layoutManager={manager}
-        virtualWidth={maxTimestamp * pixelsPerSecond}
-        width={width}
-      />
-    }}
-  </AutoSizer>
+  return <div style={{display: 'flex', flexDirection: 'row'}}>
+    <div style={{width: '50px'}}>
+      {(props.textgrids ?? []).map((_, idx) => {
+        return <div style={{height: '130px'}}>
+          <div style={{height: '50px', backgroundColor: props.item.colors?.[idx]}}/>
+          <div className={css`
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: center;
+                  `}>
+            <div className={css`
+                      font-size: 10px;
+                      color: back;
+                      padding: 0.3em 0.5em;
+                      background-color: #ffebee;
+                      border: 1px solid red;
+                      border-radius: 4px;
+                      margin: 2px;
+                    `}>
+              {props.marks[idx].totalError}
+            </div>
+            <div className={css`
+                      font-size: 10px;
+                      color: back;
+                      padding: 0.3em 0.5em;
+                      background-color: #e8f5e9;
+                      border: 1px solid green;
+                      border-radius: 4px;
+                      margin: 2px;
+                    `}>
+              {props.marks[idx].totalCorrect}
+            </div>
+          </div>
+        </div>
+      })}
+    </div>
+
+    <AutoSizer disableHeight>
+      {({ width }: any) => {
+        return <VirtualView
+          onMouseDown={handleMouseDown}
+          onKeyPress={handleKeyPress}
+          onWheel={handleWheel}
+          innerRef={scrollContainer}
+          tabIndex={0}
+          className={css`
+            outline: none;
+            overflow: auto;
+            flex: 1;          
+            
+            padding-bottom: 10px;
+            position: relative;
+          `}
+          layoutManager={manager}
+          virtualWidth={maxTimestamp * pixelsPerSecond}
+          width={width}
+        />
+      }}
+    </AutoSizer>
+  </div>
 }
 
 function Cursor(props: {

@@ -250,6 +250,7 @@ export class VirtualView extends React.PureComponent<Props> {
       virtualWidth,
       scrollToAlignment,
       scrollToCell,
+      innerRef,
       ...rest
     } = this.props;
 
