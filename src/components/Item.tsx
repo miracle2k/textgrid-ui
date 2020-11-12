@@ -94,21 +94,30 @@ export async function readFileHighLevel(file: FileSystemFileHandle|File|string) 
 }
 
 
+async function loadUrl(url: string) {
+  const response = await fetch(url);
+  return await response.arrayBuffer();
+}
+
+/**
+ * Will resolve a `FileSystemFileHandle` to an `AudioBuffer`
+ */
 export function useResolveAudio(audio: File|FileSystemFileHandle|string|undefined|null) {
-  const [file, setFile] = useState<File|string>();
+  const [buffer, setBuffer] = useState<ArrayBuffer>();
+
   useEffect(() => {
     (async () => {
       if (audio) {
         if (typeof audio === 'string') {
-          setFile(audio);
+          setBuffer(await loadUrl(audio));
         } else {
-          setFile(await resolveFileHandle(audio));
+          setBuffer(await (await resolveFileHandle(audio)).arrayBuffer());
         }
       }
     })();
   }, [audio]);
 
-  return file;
+  return buffer;
 }
 
 
@@ -137,39 +146,11 @@ export function Item(props: {
     return buffers.map(buffer => parseTextgrid(Buffer.from(buffer)));
   }, [buffers]);
 
-  const [audioUrl, setAudioUrl] = useState<string>("");
-  const audioFile = useResolveAudio(props.item.audio);
-  React.useEffect(() => {
-    if (!audioFile) {
-      setAudioUrl("");
-      return;
-    }
+  const audioBuffer = useResolveAudio(props.item.audio);
 
-    let finalUrl: string;
-    let isObjectUrl: boolean = false;
-    if (typeof audioFile === 'string') {
-      finalUrl = audioFile;
-    } else {
-      finalUrl = URL.createObjectURL(audioFile);
-      isObjectUrl = true;
-    }
+  const player = useAudioPlayer(audioBuffer);
 
-    // https://github.com/joshwcomeau/use-sound/issues/23
-    window.setTimeout(() => {
-      setAudioUrl(finalUrl);
-    }, 100)
-
-    return () => {
-      if (isObjectUrl) {
-        URL.revokeObjectURL(finalUrl);
-      }
-    }
-  }, [audioFile]);
-
-
-  const player = useAudioPlayer(audioUrl);
-
-  const initialMarks = (props.item.metadata as any).initialMarks ?? props.item.grids.map(x =>  null);
+  const initialMarks = (props.item.metadata as any)?.initialMarks ?? props.item.grids.map(x =>  null);
   const [marks, setMarks] = useState<TierMarkerState[]>(
     initialMarks.map((data: Mark[]) => {
       return {
@@ -290,7 +271,7 @@ function ScrollableCanvas(props: {
 
     // Maybe we can cache this?
     const boundingClientRect = scrollContainer.current?.getBoundingClientRect();
-    
+
     // Is it in the range?
     // Performance: accessing scrollLeft causes a "Recalculate Style" in Chrome, but this is fairly fast.
     const maxTime = (scrollContainer.current.scrollLeft + boundingClientRect!.width) / pixelsPerSecond;

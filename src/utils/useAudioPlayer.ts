@@ -5,64 +5,123 @@ import {useRafLoop} from "./useRafLoop";
 
 type PlayFunc = (opts?: {from?: number, to?: number}) => void;
 
+/**
+ * An attempt to stop the playback by scheduling a timeout. Saw howler doing this, but this does not seem to
+ * work well, it stops early. Howler may just hide this by resetting to the start when done.
+ */
+function usePlayTargetTime(audio: HTMLAudioElement|undefined|null) {
+  const timeoutId = useRef<any|null>(0);
 
-export function useAudioPlayer(url: string) {
-  const audioElement = useMemo(() => {
-    if (!url) {
-      return null;
+  const cancel = useCallback(() => {
+    if (timeoutId.current) {
+      clearTimeout(timeoutId.current);
+      timeoutId.current = null;
     }
-    return new Audio(url);
-  }, [url]);
+  }, [timeoutId])
 
-  const targetTime = useRef<number|null>(null);
+  const schedulePause = useCallback((endTime: number|null|undefined) => {
+    cancel();
 
-  // pause() when the target time is reached, if there is a target time!
-  useAudioTime(
-    audioElement,
-    (time) => {
-      if (targetTime.current === null) {
-        return;
+    if (!audio || endTime === null || endTime === undefined) {
+      return;
+    }
+
+    const timeout = (endTime - audio.currentTime) * 1000;
+    console.log(endTime, audio.currentTime, timeout)
+    timeoutId.current = setTimeout(() => {
+      audio.pause();
+      console.log(audio.currentTime);
+    }, timeout)
+  }, [audio, cancel]);
+
+  return useMemo(() => ({
+    schedulePause,
+    cancel
+  }), [cancel,schedulePause]);
+}
+
+/**
+ * Uses the webAudio API to be able to stop playback at a precise moment. The price is we have to do a lot
+ * of logic (currentTime, seeking) by ourselves.
+ */
+export function useAudioPlayer(buffer: ArrayBuffer|undefined) {
+  const audioContext = useMemo(() => new AudioContext(), []);
+
+  const seekPosition = useRef(0);
+  const playStartTime = useRef(0);
+  const isPlaying = useRef(false);
+
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer|null>(null);
+  useEffect(() => {
+    if (!buffer) { return; }
+    audioContext.decodeAudioData(buffer).then(b => setAudioBuffer(b));
+  }, [audioContext, buffer])
+
+  const currentSource = useRef<AudioBufferSourceNode|null>(null);
+
+  // If the audio buffer changes, reset
+  useEffect(() => {
+    seekPosition.current = 0;
+  }, [audioBuffer]);
+
+  // Disconnect on unmount
+  useEffect(() => {
+    return () => {
+      if (currentSource.current) {
+        currentSource.current.disconnect();
+        currentSource.current = null;
       }
-
-      if (time >= targetTime.current) {
-        audioElement?.pause();
-      }
-    },
-    [targetTime]
-  );
+    }
+  })
 
   const play = useCallback<PlayFunc>(
     (opts?) => {
-      if (!audioElement) { return; }
-      if (opts?.from !== undefined) {
-        audioElement.currentTime = opts?.from;
-      }
-      targetTime.current = opts?.to ?? null;
-      audioElement?.play();
+      if (currentSource.current) { currentSource.current.disconnect() }
 
-      // set a timeout to pause at the target time!
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.onended = () => {
+        seekPosition.current = seekPosition.current + audioContext.currentTime - playStartTime.current;
+        isPlaying.current = false;
+      }
+
+      const startTime = opts?.from ?? seekPosition.current;
+      source.start(0, startTime, opts?.to ? opts.to - startTime : undefined);
+      currentSource.current = source;
+      seekPosition.current = startTime;
+      playStartTime.current = audioContext.currentTime;
+      isPlaying.current = true;
     },
-    [audioElement]
+    [audioBuffer, audioContext]
   );
 
   const pause = useCallback(() => {
-    audioElement?.pause();
-  }, [audioElement]);
+    if (isPlaying.current) {
+      // onended will trigger and update the state
+      currentSource.current?.stop();
+    }
+  }, [audioContext.currentTime]);
 
   const seek = useCallback((time: number) => {
-    if (!audioElement) { return; }
-    audioElement.currentTime = time;
-  }, [audioElement]);
+    pause();
+    seekPosition.current = time;
+
+    // if (playing) {
+    //   // continue playing at the new position
+    // }
+  }, [audioContext.currentTime, pause]);
 
   const getPosition = useCallback(() => {
-    if (!audioElement) { return 0; }
-    return audioElement.currentTime;
-  }, [audioElement]);
+    if (isPlaying.current) {
+      return seekPosition.current + (audioContext.currentTime - playStartTime.current);
+    }
+    return seekPosition.current;
+  }, [audioContext.currentTime]);
 
   const getIsPlaying = useCallback(() => {
-    if (!audioElement) { return false; }
-    return !audioElement.paused;
-  }, [audioElement]);
+    return isPlaying.current;
+  }, []);
 
   return {
     play,
